@@ -11,6 +11,9 @@ global.DB = mongoose.createConnection('localhost', 'socketsync')
 app = express()
 app.set("trust proxy", true)
 
+server = http.createServer(app)
+io = require('socket.io').listen(server)
+
 app.configure ->
   app.set('port', process.env.PORT || 3000)
   # app.set('views', __dirname + '/views')
@@ -32,5 +35,11 @@ app.get '/', (req, res) ->
 
 # routes.init(app)
 
-http.createServer(app).listen app.get('port'), ->
+server.listen app.get('port'), ->
   console.log("Express server listening on port " + app.get('port'))
+
+io.sockets.on 'connection', (socket) ->
+  socket.emit('news', { hello: 'wor!ld' })
+
+  # socket.on('my other event', function (data) {
+  #   console.log(data);
