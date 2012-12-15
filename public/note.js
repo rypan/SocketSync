@@ -5,6 +5,11 @@ var socket = io.connect('http://localhost');
 // });
 
 
+socket.on('note.divAdded', function (divContent) {
+  $(".note-body").prepend(divContent);
+});
+
+
 
 $(function(){
 
