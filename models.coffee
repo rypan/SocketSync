@@ -1,4 +1,5 @@
 mongoose = require 'mongoose'
+cheerio = require 'cheerio'
 # _ = require 'underscore'
 
 ###### Account #######
@@ -15,6 +16,16 @@ noteSchema.methods.addDiv = (data, cb) ->
   @save ->
     cb
       content: data
+
+noteSchema.methods.addDivUnderneath = (data, underneath_id, cb) ->
+  $ = cheerio.load(@content)
+
+  $("div[data-timestamp=#{underneath_id}]").after(data)
+
+  @save ->
+    cb
+      content: data
+      underneath_id: underneath_id
 
 noteSchema.pre 'save', (next) ->
   @updated_at = new Date

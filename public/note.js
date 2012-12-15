@@ -7,13 +7,19 @@ $(function(){
   socket.emit('setNote', $("#note-id").val());
 
   socket.on('note.divAdded', function (data) {
-    $(".note-body").prepend(data.content);
+    if (data.underneath_id) {
+      // insert data.content underneath the correct div
+      // do it here
+    } else {
+      // insert at top
+      $(".note-body").prepend(data.content);
+    }
   });
 
 
   $(document).on({
     mouseenter: function () {
-      $(this).append($('<span>&nbsp; <a href="javascript:insertRow()">Insert</a> <a href="javascript:updateRow()">Update</a> <a href="javascript:deleteRow()">Delete</a></span>'));
+      $(this).append($('<span>&nbsp; <a href="#" id="insert-row">Insert</a> <a href="javascript:updateRow()">Update</a> <a href="javascript:deleteRow()">Delete</a></span>'));
     },
     mouseleave: function () {
       $(this).find("span:last").remove();
@@ -39,9 +45,13 @@ $(function(){
 
 });
 
-function insertRow(){
-	$(this).append($('<form><input id="insert-line-text" placeholder="Type a line - hit enter to submit"><button id="insert-line-button">Insert Line</button></form>'));
-}
+$(document).on("click", "#insert-row", function(){
+  $(this).closest("div").after('hi');
+});
+
+// function insertRow(){
+// 	$(this).append($('<form><input id="insert-line-text" placeholder="Type a line - hit enter to submit"><button id="insert-line-button">Insert Line</button></form>'));
+// }
 
 function updateRow(){
 

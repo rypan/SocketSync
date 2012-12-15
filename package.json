@@ -15,6 +15,7 @@
     "mongoose": "*",
     "express-mongoose": "*",
     "socket.io": "*",
-    "jade": "*"
+    "jade": "*",
+    "cheerio": "*"
   }
 }
