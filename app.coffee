@@ -41,5 +41,5 @@ server.listen app.get('port'), ->
 io.sockets.on 'connection', (socket) ->
   socket.emit('news', { hello: 'wor!ld' })
 
-  # socket.on('my other event', function (data) {
-  #   console.log(data);
+  socket.on 'sendMessage', (data) ->
+    socket.emit 'news', data.message.toUpperCase()
