@@ -38,11 +38,14 @@ app.get '/note/:id', (req, res) ->
 
 # routes.init(app)
 
-server.listen app.get('port'), ->
-  console.log("Express server listening on port " + app.get('port'))
-
 io.sockets.on 'connection', (socket) ->
   socket.emit('news', { hello: 'wor!ld' })
 
   socket.on 'yell', (data) ->
     socket.emit 'news', data.toUpperCase()
+
+  socket.on 'yellToAll', (data) ->
+    io.sockets.emit 'news', data.toUpperCase()
+
+server.listen app.get('port'), ->
+  console.log("Express server listening on port " + app.get('port'))
