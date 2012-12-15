@@ -10,16 +10,17 @@
   });
 
   $(document).on("click", "button", function(){
-    socket.emit('sendMessage', { message: $("textarea").val() });
+    socket.emit($("#command-name").val(), $("#message").val() );
   });
 
 </script>
 </head>
 <body>
 
-
-  <textarea></textarea>
+  Command Name: <input id="command-name" value="yell" /><br />
+  Message: <textarea id="message">hi</textarea><br />
   <button>Send</button>
-
+  <br /><br />
+  Output appears in console.
 </body>
 </html>
