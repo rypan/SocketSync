@@ -19,7 +19,7 @@ $(function(){
 
   $(document).on({
     mouseenter: function () {
-      $(this).append($('<span>&nbsp; <a href="#" id="insert-row">Insert</a> <a href="javascript:updateRow()">Update</a> <a href="javascript:deleteRow()">Delete</a></span>'));
+      $(this).append($('<span>&nbsp; <a href="#" id="insert-row">Insert</a> <a href="#" id="update-row">Update</a> <a href="#" id="delete-row">Delete</a></span>'));
     },
     mouseleave: function () {
       $(this).find("span:last").remove();
@@ -30,10 +30,7 @@ $(function(){
   $("#add-line-button").click(function(){
 
     divHtml = "<div data-timestamp='"+Date.now()+"'>"+$("#line-text").val()+"</div>";
-
-
     socket.emit('note.addDiv', { note_id: $("#note-id").val(), div: divHtml });
-
     $(".note-body").prepend(divHtml);
 
 
@@ -46,18 +43,13 @@ $(function(){
 });
 
 $(document).on("click", "#insert-row", function(){
-  $(this).closest("div").after('hi');
+  $(this).closest("div").after('<form><input id="insert-line-text" placeholder="Insert line here"><button id="insert-line-button">Insert Line</button></form>');
 });
 
-// function insertRow(){
-// 	$(this).append($('<form><input id="insert-line-text" placeholder="Type a line - hit enter to submit"><button id="insert-line-button">Insert Line</button></form>'));
-// }
+$(document).on("click", "#update-row", function(){
+  $(this).closest("div").after('<form><input id="update-line-text"><button id="insert-line-button">Update</button></form>');
+});
 
-function updateRow(){
-
-}
-
-function deleteRow(){
-
-}
-
+$(document).on("click", "#delete-row", function(){
+  // Delete Code
+});
