@@ -11,14 +11,15 @@ $(function(){
   });
 
 
-  $(".note-body > div").hover(
-    function () {
+  $(document).on({
+    mouseenter: function () {
       $(this).append($('<span>&nbsp; <a href="javascript:insertRow()">Insert</a> <a href="javascript:updateRow()">Update</a> <a href="javascript:deleteRow()">Delete</a></span>'));
     },
-    function () {
+    mouseleave: function () {
       $(this).find("span:last").remove();
     }
-  );
+  }, ".note-body > div");
+
 
   $("#add-line-button").click(function(){
 
