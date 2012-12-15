@@ -1,9 +1,18 @@
-!!! 5
+doctype 5
 html
   head
     title SocketSync
-  body
+    script(src="http://ajax.googleapis.com/ajax/libs/jquery/1.8.3/jquery.min.js")
 
+  body
     .container
-      h1 Note
-      #{id}
+      h1 Note #{id}
+      input#name
+      button Add Line
+
+      hr
+
+      #line1 Hello
+      a(href="#update") Update
+      &nbsp;
+      a(href="#delete") Delete
