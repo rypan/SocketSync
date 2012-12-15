@@ -28,6 +28,10 @@ $(function(){
 
 
     socket.emit('note.addDiv', { note_id: $("#note-id").val(), div: divHtml });
+
+    $(".note-body").prepend(divHtml);
+
+
   });
 
 });
