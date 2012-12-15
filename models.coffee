@@ -8,9 +8,13 @@ noteSchema = new mongoose.Schema
   creationDate: Date
   modificationDate: Date
 
+noteSchema.methods.addDiv = (data, cb) ->
+  @content = data + @content
+  @save(cb)
+
 noteSchema.pre 'save', (next) ->
   @updated_at = new Date
   @created_at ||= new Date
   next()
 
-exports.account = DB.model('Note', noteSchema)
+exports.note = DB.model('Note', noteSchema)

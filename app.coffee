@@ -31,7 +31,9 @@ app.configure 'development', ->
   app.use(express.errorHandler())
 
 app.get '/', (req, res) ->
-  res.send("hello world!")
+  Note = require('./models').note
+  Note.create {}, (err, note) ->
+    res.redirect "note/#{note.id}"
 
 app.get '/note/:id', (req, res) ->
   res.render "note", {id: req.params.id}
@@ -39,13 +41,23 @@ app.get '/note/:id', (req, res) ->
 # routes.init(app)
 
 io.sockets.on 'connection', (socket) ->
-  socket.emit('news', { hello: 'wor!ld' })
 
+  ## testing ##
   socket.on 'yell', (data) ->
     socket.emit 'news', data.toUpperCase()
 
   socket.on 'yellToAll', (data) ->
     io.sockets.emit 'news', data.toUpperCase()
+
+  ## add div ##
+  socket.on 'add', (data) ->
+    Note = require('./models').note
+
+    return unless data.note_id
+
+    Note.findOne data.note_id, (err, note) ->
+      note.addDiv data.div, ->
+        console.log "Successfully added a div!"
 
 server.listen app.get('port'), ->
   console.log("Express server listening on port " + app.get('port'))
