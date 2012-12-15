@@ -6,13 +6,15 @@ html
 
   body
     .container
-      h1 Note #{id}
+      h1 Note #{note.id}
       input#name
       button Add Line
 
       hr
 
       .note-body
+
+      	#{note.content}
 
          #line1 Hello
 
