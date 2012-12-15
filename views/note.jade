@@ -9,9 +9,10 @@ html
   body
     .container
       h1 Note #{note.id}
-      input(type="hidden", id="note-id", value="#{note.id}")
-      input#line-text
-      button#add-line-button Add Line
+      form
+        input(type="hidden", id="note-id", value="#{note.id}")
+        input#line-text
+        button#add-line-button Add Line
 
       hr
 
