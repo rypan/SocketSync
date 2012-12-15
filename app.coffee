@@ -36,7 +36,9 @@ app.get '/', (req, res) ->
     res.redirect "note/#{note.id}"
 
 app.get '/note/:id', (req, res) ->
-  res.render "note", {id: req.params.id}
+  Note = require('./models').note
+  Note.findOne req.params.id, (err, note) ->
+    res.render "note", {note: note}
 
 # routes.init(app)
 
@@ -50,14 +52,14 @@ io.sockets.on 'connection', (socket) ->
     io.sockets.emit 'news', data.toUpperCase()
 
   ## add div ##
-  socket.on 'add', (data) ->
+  socket.on 'note.addDiv', (data) ->
     Note = require('./models').note
 
     return unless data.note_id
 
     Note.findOne data.note_id, (err, note) ->
-      note.addDiv data.div, ->
-        console.log "Successfully added a div!"
+      note.addDiv data.div, (err, note) ->
+        # asdf
 
 server.listen app.get('port'), ->
   console.log("Express server listening on port " + app.get('port'))

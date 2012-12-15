@@ -4,7 +4,9 @@ mongoose = require 'mongoose'
 ###### Account #######
 
 noteSchema = new mongoose.Schema
-  content: String
+  content:
+    type: String
+    default: ""
   creationDate: Date
   modificationDate: Date
 
