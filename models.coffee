@@ -22,6 +22,8 @@ noteSchema.methods.addDivUnderneath = (data, underneath_id, cb) ->
 
   $("div[data-timestamp=#{underneath_id}]").after(data)
 
+  @content = $.html()
+
   @save ->
     cb
       content: data

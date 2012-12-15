@@ -54,7 +54,7 @@ io.sockets.on 'connection', (socket) ->
 
   socket.on 'note.addDivUnderneath', (data) ->
     Note.findById data.note_id, (err, note) ->
-      note.addDivUndernath data.div, data.underneath_id, (params) ->
+      note.addDivUnderneath data.div, data.underneath_id, (params) ->
         socket.broadcast.to(note.id).emit 'note.divAdded', params
 
 server.listen app.get('port'), ->
