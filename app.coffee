@@ -59,7 +59,7 @@ io.sockets.on 'connection', (socket) ->
 
     Note.findOne data.note_id, (err, note) ->
       note.addDiv data.div, ->
-        io.sockets.emit 'note.divAdded', data.div
+        socket.broadcast.emit 'note.divAdded', data.div
 
 server.listen app.get('port'), ->
   console.log("Express server listening on port " + app.get('port'))
