@@ -57,7 +57,7 @@ io.sockets.on 'connection', (socket) ->
     Note.findById data.note_id, (err, note) ->
       note.addDiv data.div, ->
         console.log "room: #{note.id}"
-        io.sockets.in(note.id).emit 'note.divAdded', data.div
+        socket.broadcast.to(note.id).emit 'note.divAdded', data.div
 
 server.listen app.get('port'), ->
   console.log("Express server listening on port " + app.get('port'))
