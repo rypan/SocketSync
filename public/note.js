@@ -6,8 +6,8 @@ $(function(){
 
   socket.emit('setNote', $("#note-id").val());
 
-  socket.on('note.divAdded', function (divContent) {
-    $(".note-body").prepend(divContent);
+  socket.on('note.divAdded', function (data) {
+    $(".note-body").prepend(data.content);
   });
 
 

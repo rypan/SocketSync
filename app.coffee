@@ -30,13 +30,13 @@ app.configure ->
 app.configure 'development', ->
   app.use(express.errorHandler())
 
+Note = require('./models').note
+
 app.get '/', (req, res) ->
-  Note = require('./models').note
   Note.create {}, (err, note) ->
     res.redirect "note/#{note.id}"
 
 app.get '/note/:id', (req, res) ->
-  Note = require('./models').note
   Note.findById req.params.id, (err, note) ->
     res.render "note", {note: note}
 
@@ -46,18 +46,16 @@ io.sockets.on 'connection', (socket) ->
 
   socket.on 'setNote', (data) =>
     socket.join(data)
-    console.log "joined #{data}"
 
-  ## add div ##
   socket.on 'note.addDiv', (data) ->
-    Note = require('./models').note
-
-    return unless data.note_id
-
     Note.findById data.note_id, (err, note) ->
-      note.addDiv data.div, ->
-        console.log "room: #{note.id}"
-        socket.broadcast.to(note.id).emit 'note.divAdded', data.div
+      note.addDiv data.div, (params) ->
+        socket.broadcast.to(note.id).emit 'note.divAdded', params
+
+  socket.on 'note.addDivUnderneath', (data) ->
+    Note.findById data.note_id, (err, note) ->
+      note.addDivUndernath data.div, data.underneath_id, (params) ->
+        socket.broadcast.to(note.id).emit 'note.divAdded', params
 
 server.listen app.get('port'), ->
   console.log("Express server listening on port " + app.get('port'))

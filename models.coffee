@@ -12,7 +12,9 @@ noteSchema = new mongoose.Schema
 
 noteSchema.methods.addDiv = (data, cb) ->
   @content = data + @content
-  @save(cb)
+  @save ->
+    cb
+      content: data
 
 noteSchema.pre 'save', (next) ->
   @updated_at = new Date
