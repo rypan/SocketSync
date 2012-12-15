@@ -34,7 +34,7 @@ app.get '/', (req, res) ->
   res.send("hello world!")
 
 app.get '/note/:id', (req, res) ->
-  res.render "note"
+  res.render "note", {id: req.params.id}
 
 # routes.init(app)
 
