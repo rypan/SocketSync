@@ -5,13 +5,14 @@ html
     script(src="http://ajax.googleapis.com/ajax/libs/jquery/1.8.3/jquery.min.js")
     script(src="/socket.io/socket.io.js")
     script(src="/note.js")
+    link(rel='stylesheet', href='/note.css')
 
   body
     .container
-      h1 Note #{note._id}
+      h1 Note #{note.id}
       form
-        input(type="hidden", id="note-id", value="#{note._id}")
-        input#line-text
+        input(type="hidden", id="note-id", value="#{note.id}")
+        input#line-text(placeholder="Type a line - hit enter to submit")
         button#add-line-button Add Line
 
       hr

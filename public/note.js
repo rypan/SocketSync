@@ -13,7 +13,7 @@ $(function(){
 
   $(".note-body > div").hover(
     function () {
-      $(this).append($('<span>&nbsp; <a href="#">Update</a> <a href="#">Delete</a></span>'));
+      $(this).append($('<span>&nbsp; <a href="javascript:insertRow()">Insert</a> <a href="javascript:updateRow()">Update</a> <a href="javascript:deleteRow()">Delete</a></span>'));
     },
     function () {
       $(this).find("span:last").remove();
@@ -37,4 +37,16 @@ $(function(){
   });
 
 });
+
+function insertRow(){
+	$(this).append($('<form><input id="insert-line-text" placeholder="Type a line - hit enter to submit"><button id="insert-line-button">Insert Line</button></form>'));
+}
+
+function updateRow(){
+
+}
+
+function deleteRow(){
+
+}
 

@@ -4,8 +4,28 @@ html {
 
 body {
     font-family: 'Helvetica Neue', sans-serif;
-    font-size: 13px;
+    font-size: 15px;
     height: 100%;
     line-height: 1.4;
     margin: 0;
+}
+
+h1{
+	margin: 0px;
+}
+
+.container{
+	padding: 10px;
+}
+
+#line-text{
+	font-size: 20px;
+	width: 500px;
+	padding: 5px;
+}
+
+#add-line-button{
+	width: 100px;
+	margin-left: 10px;
+	visibility: hidden;
 }
