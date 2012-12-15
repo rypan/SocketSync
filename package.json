@@ -1,5 +1,5 @@
 {
-  "name": "SockeySync",
+  "name": "SocketSync",
   "version": "0.0.0",
   "engines": {
     "node": ">= 0.5.0",
