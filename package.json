@@ -14,6 +14,7 @@
     "express": "3.0.0rc3",
     "mongoose": "*",
     "express-mongoose": "*",
-    "socket.io": "*"
+    "socket.io": "*",
+    "jade": "*"
   }
 }
