@@ -1,17 +1,15 @@
-var socket = io.connect('http://localhost');
-// socket.on('news', function (data) {
-//   console.log(data);
-//   // socket.emit('my other event', { my: 'data' });
-// });
-
-
-socket.on('note.divAdded', function (divContent) {
-  $(".note-body").prepend(divContent);
-});
-
-
-
 $(function(){
+
+  var socket = io.connect('http://localhost:3000', function(){
+  // socket
+  });
+
+  socket.emit('setNote', $("#note-id").val());
+
+  socket.on('note.divAdded', function (divContent) {
+    $(".note-body").prepend(divContent);
+  });
+
 
   $(".note-body > div").hover(
     function () {

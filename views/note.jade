@@ -8,9 +8,9 @@ html
 
   body
     .container
-      h1 Note #{note.id}
+      h1 Note #{note._id}
       form
-        input(type="hidden", id="note-id", value="#{note.id}")
+        input(type="hidden", id="note-id", value="#{note._id}")
         input#line-text
         button#add-line-button Add Line
 

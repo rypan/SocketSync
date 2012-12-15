@@ -37,19 +37,16 @@ app.get '/', (req, res) ->
 
 app.get '/note/:id', (req, res) ->
   Note = require('./models').note
-  Note.findOne req.params.id, (err, note) ->
+  Note.findById req.params.id, (err, note) ->
     res.render "note", {note: note}
 
 # routes.init(app)
 
 io.sockets.on 'connection', (socket) ->
 
-  ## testing ##
-  socket.on 'yell', (data) ->
-    socket.emit 'news', data.toUpperCase()
-
-  socket.on 'yellToAll', (data) ->
-    io.sockets.emit 'news', data.toUpperCase()
+  socket.on 'setNote', (data) =>
+    socket.join(data)
+    console.log "joined #{data}"
 
   ## add div ##
   socket.on 'note.addDiv', (data) ->
@@ -57,9 +54,10 @@ io.sockets.on 'connection', (socket) ->
 
     return unless data.note_id
 
-    Note.findOne data.note_id, (err, note) ->
+    Note.findById data.note_id, (err, note) ->
       note.addDiv data.div, ->
-        socket.broadcast.emit 'note.divAdded', data.div
+        console.log "room: #{note.id}"
+        io.sockets.in(note.id).emit 'note.divAdded', data.div
 
 server.listen app.get('port'), ->
   console.log("Express server listening on port " + app.get('port'))
