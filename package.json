@@ -1,0 +1,19 @@
+{
+  "name": "SockeySync",
+  "version": "0.0.0",
+  "engines": {
+    "node": ">= 0.5.0",
+    "npm": "1.1.x"
+  },
+  "private": true,
+  "scripts": {
+    "start": "node server"
+  },
+  "dependencies": {
+    "coffee-script": "*",
+    "express": "3.0.0rc3",
+    "mongoose": "*",
+    "express-mongoose": "*",
+    "socket.io": "*"
+  }
+}
