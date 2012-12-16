@@ -12,6 +12,7 @@
   "dependencies": {
     "coffee-script": "*",
     "express": "3.0.0rc3",
+    "connect-assets": "*",
     "mongoose": "*",
     "express-mongoose": "*",
     "socket.io": "*",
