@@ -18,7 +18,7 @@ updateDiv = (data) ->
 removeDiv = (div_id) ->
   $("div[data-timestamp=#{div_id}]").remove()
 
-socket = io.connect 'http://localhost:3000'
+socket = io.connect()
 socket.emit('setNote', SocketSync.note_id)
 
 socket.on 'note.divAdded', addDiv

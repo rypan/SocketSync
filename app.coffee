@@ -2,16 +2,35 @@ express = require 'express'
 http = require 'http'
 path = require 'path'
 mongoose = require 'mongoose'
+redis = require 'redis'
+RedisStore  = require('connect-redis')(express);
 
 require 'express-mongoose'
 
-global.DB = mongoose.createConnection('localhost', 'socketsync')
+if process.env.DATABASE_CONNECTION_STRING
+  global.DB = mongoose.createConnection(process.env.DATABASE_CONNECTION_STRING)
+else
+  global.DB = mongoose.createConnection('localhost', 'socketsync')
 
 app = express()
 app.set("trust proxy", true)
 
 server = http.createServer(app)
 io = require('socket.io').listen(server)
+
+if process.env.REDIS_HOST
+  redisStore = new RedisStore
+    host: process.env.REDIS_HOST
+    pass: process.env.REDIS_PW
+    port: 6379
+    maxAge: 1209600000
+
+else
+  redisStore = new RedisStore
+    host: "localhost"
+    pass: ""
+    port: 6379
+    maxAge: 1209600000
 
 app.configure ->
   app.set('port', process.env.PORT || 3000)
@@ -22,7 +41,9 @@ app.configure ->
   app.use(express.bodyParser())
   app.use(express.methodOverride())
   app.use(express.cookieParser('your secret here'))
-  app.use(express.session())
+  app.use express.session
+    secret: 'this is a great session secret, really.'
+    store: redisStore
   app.use(app.router)
   app.use require('connect-assets')()
   app.use(express.static(path.join(__dirname, 'public')))
@@ -67,4 +88,4 @@ io.sockets.on 'connection', (socket) ->
         socket.broadcast.to(note.id).emit 'note.divRemoved', params
 
 server.listen app.get('port'), ->
-  console.log("Express server listening on port " + app.get('port'))
+  console.log("Express server listening on port " + app.get('port')) unless process.env.SUBDOMAIN
