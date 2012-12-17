@@ -9,10 +9,15 @@ addDiv = (data) ->
     # insert data.div underneath the correct div
     $("div[data-timestamp=#{data.underneath_id}]").after(data.div)
 
+removeDiv = (div_id) ->
+  $("div[data-timestamp=#{div_id}]").remove()
+
 socket = io.connect 'http://localhost:3000'
 socket.emit('setNote', SocketSync.note_id)
 
 socket.on 'note.divAdded', addDiv
+socket.on 'note.divRemoved', (data) ->
+  removeDiv(data.div_id)
 
 $(document).on
   mouseenter: ->
@@ -36,7 +41,6 @@ $(document).on "submit", "#add-line-form", (e) ->
   """
 
   socket.emit 'note.addDiv',
-    note_id: SocketSync.note_id
     underneath_id: $("#underneath-id").val()
     div: divHtml
 
@@ -51,3 +55,11 @@ $(document).on "click", "#insert-row", ->
   line = $(this).closest("div")
   $("#add-line-form").insertAfter(line)
   $("#add-line-form #underneath-id").val(line.data('timestamp'))
+
+$(document).on "click", "#delete-row", ->
+  line = $(this).closest("div")
+
+  socket.emit 'note.removeDiv',
+    div_id: line.data('timestamp')
+
+  removeDiv(line.data('timestamp'))
