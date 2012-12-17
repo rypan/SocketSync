@@ -23,7 +23,7 @@ noteSchema.methods.addDiv = (data, cb) ->
 
   @save ->
     cb
-      content: data.div
+      div: data.div
       underneath_id: data.underneath_id
 
 noteSchema.pre 'save', (next) ->
