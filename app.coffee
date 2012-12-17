@@ -1,5 +1,4 @@
 express = require 'express'
-# routes = require './routes'
 http = require 'http'
 path = require 'path'
 mongoose = require 'mongoose'
@@ -49,13 +48,9 @@ io.sockets.on 'connection', (socket) ->
     socket.join(data)
 
   socket.on 'note.addDiv', (data) ->
+    console.log data
     Note.findById data.note_id, (err, note) ->
-      note.addDiv data.div, (params) ->
-        socket.broadcast.to(note.id).emit 'note.divAdded', params
-
-  socket.on 'note.addDivUnderneath', (data) ->
-    Note.findById data.note_id, (err, note) ->
-      note.addDivUnderneath data.div, data.underneath_id, (params) ->
+      note.addDiv data, (params) ->
         socket.broadcast.to(note.id).emit 'note.divAdded', params
 
 server.listen app.get('port'), ->

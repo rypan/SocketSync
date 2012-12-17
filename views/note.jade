@@ -2,6 +2,7 @@ doctype 5
 html
   head
     title SocketSync
+    | <script>var SocketSync = {}; SocketSync.note_id = "#{note.id}";</script>
     script(src="http://ajax.googleapis.com/ajax/libs/jquery/1.8.3/jquery.min.js")
     != js("vendor/socket.io.js")
     != js("note")
@@ -10,11 +11,9 @@ html
   body
     .container
       h1 Note #{note.id}
-      form
-        input(type="hidden", id="note-id", value="#{note.id}")
+      form#add-line-form
+        input#underneath-id(type="text", value="")
         input#line-text(placeholder="Type a line - hit enter to submit")
-        button#add-line-button Add Line
-
-      hr
+        button Add Line
 
       .note-body!= note.content

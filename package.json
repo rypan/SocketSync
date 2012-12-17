@@ -13,6 +13,7 @@
     "coffee-script": "*",
     "express": "3.0.0rc3",
     "connect-assets": "*",
+    "express-expose": "*",
     "mongoose": "*",
     "express-mongoose": "*",
     "socket.io": "*",
