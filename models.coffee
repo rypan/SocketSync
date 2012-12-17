@@ -26,6 +26,16 @@ noteSchema.methods.addDiv = (data, cb) ->
       div: data.div
       underneath_id: data.underneath_id
 
+noteSchema.methods.updateDiv = (data, cb) ->
+  $ = cheerio.load(@content)
+  $("div[data-timestamp=#{data.div_id}]").html(data.new_text)
+  @content = $.html()
+
+  @save ->
+    cb
+      div_id: data.div_id
+      new_text: data.new_text
+
 noteSchema.methods.removeDiv = (data, cb) ->
   $ = cheerio.load(@content)
   $("div[data-timestamp=#{data.div_id}]").remove()

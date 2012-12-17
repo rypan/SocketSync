@@ -54,6 +54,12 @@ io.sockets.on 'connection', (socket) ->
       note.addDiv data, (params) ->
         socket.broadcast.to(note.id).emit 'note.divAdded', params
 
+  socket.on 'note.updateDiv', (data) ->
+    data.note_id = socket.note_id
+    Note.findById data.note_id, (err, note) ->
+      note.updateDiv data, (params) ->
+        socket.broadcast.to(note.id).emit 'note.divUpdated', params
+
   socket.on 'note.removeDiv', (data) ->
     data.note_id = socket.note_id
     Note.findById data.note_id, (err, note) ->

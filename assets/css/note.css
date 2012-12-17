@@ -18,14 +18,22 @@ h1{
   padding: 10px;
 }
 
-#line-text{
+.input-big{
   font-size: 20px;
   width: 500px;
   padding: 5px;
+}
+
+.input-long {
+  width: 500px;
 }
 
 #add-line-button{
   width: 100px;
   margin-left: 10px;
   visibility: hidden;
+}
+
+#update-line-form {
+  display: none;
 }

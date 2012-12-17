@@ -12,8 +12,13 @@ html
     .container
       h1 Note #{note.id}
       form#add-line-form
-        input#underneath-id(type="text", value="")
-        input#line-text(placeholder="Type a line - hit enter to submit")
+        input#underneath-id(type="hidden")
+        input.input-big#line-text(placeholder="Type a line - hit enter to submit")
         button Add Line
+
+      form#update-line-form
+        input.div-id(type="hidden")
+        input.input-long.div-text(type="text")
+        button Update Line
 
       .note-body!= note.content
