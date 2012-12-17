@@ -7,7 +7,7 @@
   },
   "private": true,
   "scripts": {
-    "start": "node server"
+    "start": "coffee app.coffee"
   },
   "dependencies": {
     "coffee-script": "*",
@@ -19,5 +19,6 @@
     "socket.io": "*",
     "jade": "*",
     "cheerio": "*"
-  }
+  },
+  "subdomain": "socketsync"
 }
