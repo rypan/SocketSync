@@ -1,0 +1,15 @@
+doctype 5
+html
+  head
+    title Mochi Test
+    | <script>var SocketSync = {}; SocketSync.note_id = "#{note.id}";</script>
+    script(src="http://ajax.googleapis.com/ajax/libs/jquery/1.8.3/jquery.min.js")
+    != js("vendor/jcade.js")
+    != js("vendor/socket.io.js")
+    != js("mochi")
+    != css("mochi")
+
+  #note
+    input#title.title(type="text")
+    #title-hint.text-hint Title
+    | <div id="editor">!{note.content ? note.content + "<div><br /></div>" : "<div><br /></div>"}</div>

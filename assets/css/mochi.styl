@@ -1,0 +1,109 @@
+html {
+    height: 100%;
+}
+
+body {
+    font-family: 'Helvetica Neue', sans-serif;
+    font-size: 13px;
+    height: 100%;
+    line-height: 1.4;
+    margin: 0;
+}
+
+.title {
+    border: 0;
+    border-bottom: 1px solid #f6f5f9;
+    box-sizing: border-box;
+    font-family: inherit;
+    font-size: 16px;
+    font-weight: bold;
+    height: 49px;
+    margin: 0;
+    outline: 0;
+    padding: 0 11px;
+    width: 100%;
+
+    /* allow editor to fill height */
+    left: 0;
+    position: absolute;
+    top: 0;
+}
+
+@-webkit-keyframes showcheckbox {
+    0% { -webkit-transform: scale(1, 0); }
+    50% { -webkit-transform: scale(0.8, 1.2); }
+    75% { -webkit-transform: scale(1.2, 0.8); }
+    100% { -webkit-transform: scale(1, 1); }
+}
+
+.checkbox {
+    border: 1px solid #999;
+    border-radius: 3px;
+    cursor: default;
+    margin-bottom: 4px;
+    padding: 5px;
+    vertical-align: middle;
+
+    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+.checkbox:hover {
+    border-color: #ccc;
+}
+
+.checkbox:active {
+    background-color: #eee;
+}
+
+.checkbox-checked {
+    background: transparent url(checkmark.png) no-repeat 1px 0;
+}
+
+@media only screen and (-webkit-device-pixel-ratio: 2) {
+    .checkbox-checked {
+        background-image: url(checkmark@2x.png);
+        background-size: 8px 9px;
+    }
+}
+
+.checkbox-animated {
+    -webkit-animation: showcheckbox 300ms ease-out;
+    -webkit-transform-origin: 50% 100%;
+}
+
+#note {
+    height: 100%;
+    position: relative;
+}
+
+#editor {
+    background-color: #ffffff;
+    outline: 0;
+    padding: 11px;
+    white-space: pre-wrap;
+
+    /* make room for title header and top padding */
+    box-sizing: border-box;
+    min-height: 100%;
+    padding-top: 62px; /* input height + 1 + padding of 12px */
+}
+
+.text-hint {
+    color: #999999;
+    left: 12px;
+    pointer-events: none;
+    position: absolute;
+    top: 0;
+
+    font-size: 16px;
+    font-weight: bold;
+    line-height: 49px;
+}
+
+.text-hint-focused {
+    color: #dddddd;
+}
+
+.text-hint-focus {
+    color: #dddddd;
+}

@@ -55,7 +55,11 @@ Note = require('./models').note
 
 app.get '/', (req, res) ->
   Note.create {}, (err, note) ->
-    res.redirect "note/#{note.id}"
+    res.redirect "mochi/#{note.id}"
+
+app.get '/mochi/:id', (req, res) ->
+  Note.findById req.params.id, (err, note) ->
+    res.render "mochi", {note: note}
 
 app.get '/note/:id', (req, res) ->
   Note.findById req.params.id, (err, note) ->
@@ -74,6 +78,7 @@ io.sockets.on 'connection', (socket) ->
     Note.findById data.note_id, (err, note) ->
       note.addDiv data, (params) ->
         socket.broadcast.to(note.id).emit 'note.divAdded', params
+
 
   socket.on 'note.updateDiv', (data) ->
     data.note_id = socket.note_id

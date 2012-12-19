@@ -13,11 +13,11 @@ noteSchema = new mongoose.Schema
   modificationDate: Date
 
 noteSchema.methods.addDiv = (data, cb) ->
-  if data.underneath_id is ""
+  $ = cheerio.load(@content)
+  if data.underneath_id is "" or $("div[data-timestamp=#{data.underneath_id}]").length is 0
     @content = data.div + @content
 
   else
-    $ = cheerio.load(@content)
     $("div[data-timestamp=#{data.underneath_id}]").after(data.div)
     @content = $.html()
 
