@@ -74,6 +74,7 @@ io.sockets.on 'connection', (socket) ->
     socket.note_id = note_id
 
   socket.on 'note.addDiv', (data) ->
+    console.log 'adding ' + data.div
     data.note_id = socket.note_id
     Note.findById data.note_id, (err, note) ->
       note.addDiv data, (params) ->

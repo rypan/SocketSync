@@ -48,12 +48,30 @@ var editor = (function () {
         });
     });
 
+    function isDuplicateTimestamp($el) {
+        ts = $el.data('timestamp');
+
+        if (!ts) return false;
+
+        if ($("#editor div[data-timestamp="+ts+"]").length > 1){
+            return true;
+        }
+    }
+
 
     function emitAddDiv(html, previousTimestamp) {
         var params = { div: html };
         if (previousTimestamp) params["underneath_id"] = previousTimestamp;
         socket.emit('note.addDiv', params);
         console.log(params);
+    }
+
+   function emitUpdateDiv(html, timestamp) {
+        socket.emit('note.updateDiv', {
+            div_id: timestamp,
+            new_text: html
+        });
+        console.log("updated", html, timestamp);
     }
 
     function outerHtmlWithTimestamp(div) {
@@ -387,7 +405,14 @@ var editor = (function () {
                     var justAddedLine = $(theNode);
 
                     if (justAddedLine.data('timestamp')) {
-                        console.log("that line already exists");
+
+                        if (isDuplicateTimestamp(justAddedLine)) {
+                            justAddedLine.removeAttr('data-timestamp');
+                        } else {
+                            emitUpdateDiv(outerHtmlWithTimestamp(justAddedLine), justAddedLine.data('timestamp'));
+                        }
+
+
                     } else {
                         justAddedLine.data('timestamp', Date.now());
                         console.log("outerHTML", outerHtmlWithTimestamp(justAddedLine));
