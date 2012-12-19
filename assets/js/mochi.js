@@ -6,8 +6,6 @@ socket.on('note.divRemoved', function(data){
 });
 
 socket.on('note.divAdded', function(data){
-  console.log("received", data);
-
   if (!data.underneath_id) {
     // # insert at top
     $("#editor").prepend(data.div);
@@ -42,9 +40,17 @@ var editor = (function () {
         if (boundRemoveNode) return;
         boundRemoveNode = true;
         $(document).on("DOMNodeRemoved", function(e){
+            console.log("about to remove", e);
+            console.log($(e.srcElement)[0].outerHTML);
             if (e.srcElement.nodeName === "BR") return;
-            console.log("removing", e.target);
-            removeDiv($(e.target));
+            removeDiv($(e.srcElement));
+        });
+        $(document).on("DOMNodeInserted", function(e){
+            console.log("inserted", e);
+            if (isDuplicateTimestamp($(e.target))) {
+                console.log('dupe ts');
+                $(e.target).removeAttr('data-timestamp');
+            }
         });
     });
 
@@ -63,7 +69,6 @@ var editor = (function () {
         var params = { div: html };
         if (previousTimestamp) params["underneath_id"] = previousTimestamp;
         socket.emit('note.addDiv', params);
-        console.log(params);
     }
 
    function emitUpdateDiv(html, timestamp) {
@@ -71,7 +76,6 @@ var editor = (function () {
             div_id: timestamp,
             new_text: html
         });
-        console.log("updated", html, timestamp);
     }
 
     function outerHtmlWithTimestamp(div) {
@@ -404,19 +408,24 @@ var editor = (function () {
 
                     var justAddedLine = $(theNode);
 
+                    console.log("justAddedLine", justAddedLine);
+
+                    if (justAddedLine.parent().data('timestamp')) {
+                        console.log('inside');
+                        justAddedLine.insertAfter(justAddedLine.parent());
+                    }
+
                     if (justAddedLine.data('timestamp')) {
 
-                        if (isDuplicateTimestamp(justAddedLine)) {
-                            justAddedLine.removeAttr('data-timestamp');
-                        } else {
+                        // if (isDuplicateTimestamp(justAddedLine)) {
+                        //     justAddedLine.removeAttr('data-timestamp');
+                        // } else {
                             emitUpdateDiv(outerHtmlWithTimestamp(justAddedLine), justAddedLine.data('timestamp'));
-                        }
+                        // }
 
 
                     } else {
                         justAddedLine.data('timestamp', Date.now());
-                        console.log("outerHTML", outerHtmlWithTimestamp(justAddedLine));
-                        console.log("theNode", theNode);
                         emitAddDiv(outerHtmlWithTimestamp(justAddedLine), $(theNode).prev().data('timestamp'));
 
                         // @adam update

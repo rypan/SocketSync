@@ -15,6 +15,7 @@ noteSchema = new mongoose.Schema
 noteSchema.methods.addDiv = (data, cb) ->
   $ = cheerio.load(@content)
   if data.underneath_id is "" or $("div[data-timestamp=#{data.underneath_id}]").length is 0
+    console.log "couldnt' find or at top"
     @content = data.div + @content
 
   else
