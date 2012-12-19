@@ -1,6 +1,21 @@
 socket = io.connect()
 socket.emit('setNote', SocketSync.note_id)
 
+socket.on('note.divRemoved', function(data){
+  $("#editor div[data-timestamp="+data.div_id+"]").remove();
+});
+
+socket.on('note.divAdded', function(data){
+  console.log("received", data);
+
+  if (!data.underneath_id) {
+    // # insert at top
+    $("#editor").prepend(data.div);
+  } else {
+    // # insert data.div underneath the correct div
+    $("#editor div[data-timestamp="+data.underneath_id+"]").after(data.div);
+  }
+});
 
 var HostApp = {
     noteChanged: function(){},
@@ -13,6 +28,26 @@ var editor = (function () {
     var titleHint;
     var editorEl;
     var noteChangeTimeoutId;
+
+    removeDiv = function($div) {
+        socket.emit('note.removeDiv', {
+            div_id: $div.data('timestamp')
+        });
+    }
+
+
+    var boundRemoveNode = false;
+
+    $(document).on("focus", "#editor", function(){
+        if (boundRemoveNode) return;
+        boundRemoveNode = true;
+        $(document).on("DOMNodeRemoved", function(e){
+            if (e.srcElement.nodeName === "BR") return;
+            console.log("removing", e.target);
+            removeDiv($(e.target));
+        });
+    });
+
 
     function emitAddDiv(html, previousTimestamp) {
         var params = { div: html };
