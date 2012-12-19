@@ -1,6 +1,6 @@
 {
   "name": "SocketSync",
-  "version": "0.0.0-6",
+  "version": "0.0.0-7",
   "engines": {
     "node": ">= 0.5.0",
     "npm": "1.1.x"
@@ -20,7 +20,8 @@
     "jade": "*",
     "cheerio": "*",
     "redis": ">= 0.7.0",
-    "connect-redis": "1.0.6"
+    "connect-redis": "1.0.6",
+    "stylus": "*"
   },
   "subdomain": "socketsync"
 }
