@@ -34,41 +34,59 @@ var editor = (function () {
     }
 
 
-    var boundRemoveNode = false;
+    $(document).on("focus.boundRemoveNode", "#editor", function(){
+        $(document).off(".boundRemoveNode")
 
-    $(document).on("focus", "#editor", function(){
-        if (boundRemoveNode) return;
-        boundRemoveNode = true;
         $(document).on("DOMNodeRemoved", function(e){
-            console.log("about to remove", e);
-            console.log($(e.srcElement)[0].outerHTML);
-            if (e.srcElement.nodeName === "BR") return;
-            removeDiv($(e.srcElement));
+            // console.log("removing", e);
+            // console.log($(e.srcElement)[0].outerHTML);
+            // if (e.srcElement.nodeName === "BR") return;
+            // removeDiv($(e.srcElement));
         });
         $(document).on("DOMNodeInserted", function(e){
-            console.log("inserted", e);
+            if (e.srcElement.nodeName !== "DIV") return;
             if (isDuplicateTimestamp($(e.target))) {
-                console.log('dupe ts');
+                // console.log('Dupe Timestamp, removing attr');
                 $(e.target).removeAttr('data-timestamp');
+            } else {
+                // console.log('stamping');
+                // $(e.target).data('timestamp', e.timeStamp);
             }
         });
     });
 
     function isDuplicateTimestamp($el) {
-        ts = $el.data('timestamp');
+        if (!$el) return false;
 
-        if (!ts) return false;
-
-        if ($("#editor div[data-timestamp="+ts+"]").length > 1){
+        if ($("#editor div[data-timestamp="+$el.data('timestamp')+"]").not($el).length > 0){
             return true;
         }
     }
 
 
-    function emitAddDiv(html, previousTimestamp) {
-        var params = { div: html };
-        if (previousTimestamp) params["underneath_id"] = previousTimestamp;
-        socket.emit('note.addDiv', params);
+    function emitAddDiv($div) {
+
+        if (!$div.data('timestamp')) {
+            var isDupe = false;
+            var isNew = true;
+            $div.data('timestamp', Date.now());
+        } else {
+            var isNew = false;
+            var isDupe = isDuplicateTimestamp($div);
+        }
+
+        var html = outerHtmlWithTimestamp($div);
+        var myTimestamp = $div.data('timestamp');
+        var previousTimestamp = $div.prev().data('timestamp');
+
+        console.log("addDiv", html);
+        if (!isNew) {
+            emitUpdateDiv(html, myTimestamp);
+        } else {
+            var params = { div: html };
+            if (previousTimestamp) params["underneath_id"] = previousTimestamp;
+            socket.emit('note.addDiv', params);
+        }
     }
 
    function emitUpdateDiv(html, timestamp) {
@@ -79,7 +97,7 @@ var editor = (function () {
     }
 
     function outerHtmlWithTimestamp(div) {
-        return "<div data-timestamp='"+div.data('timestamp')+"'>"+(div.html() || div.text())+"</div>"
+        return "<div class='node' data-timestamp='"+div.data('timestamp')+"'>"+(div.html() || div.text())+"</div>"
     }
 
     function getSelRange() {
@@ -404,43 +422,47 @@ var editor = (function () {
                 } else if (keyCode === 13) { // return
                     var sel = window.getSelection();
 
-                    var theNode = sel.anchorNode.nodeType === 3 ? $(sel.anchorNode).parent()[0] : sel.anchorNode;
+                    $theNode = $(sel.anchorNode);
 
-                    var justAddedLine = $(theNode);
-
-                    console.log("justAddedLine", justAddedLine);
-
-                    if (justAddedLine.parent().data('timestamp')) {
-                        console.log('inside');
-                        justAddedLine.insertAfter(justAddedLine.parent());
+                    while (!$theNode.hasClass('node')) {
+                        console.log($theNode);
+                        $theNode = $theNode.parent();
                     }
 
-                    if (justAddedLine.data('timestamp')) {
-
-                        // if (isDuplicateTimestamp(justAddedLine)) {
-                        //     justAddedLine.removeAttr('data-timestamp');
-                        // } else {
-                            emitUpdateDiv(outerHtmlWithTimestamp(justAddedLine), justAddedLine.data('timestamp'));
-                        // }
-
-
-                    } else {
-                        justAddedLine.data('timestamp', Date.now());
-                        emitAddDiv(outerHtmlWithTimestamp(justAddedLine), $(theNode).prev().data('timestamp'));
-
-                        // @adam update
+                    if ($theNode.parent().hasClass('node')) {
+                        $theNode.insertAfter($theNode.parent());
                     }
+
+                    console.log($theNode);
+
+                    // if (!$theNode.data('timestamp')) {
+                    //     $theNode.data('timestamp', Date.now());
+                    // }
+
+                    // console.log("timestamped", $theNode.data('timestamp'))
+
+                    // if ($theNode.parent().attr('id') === 'editor') {
+                    //     console.log('inside');
+                    //     $theNode.insertAfter($theNode.parent());
+                    // }
+
+
+                    emitAddDiv($theNode);
+                    // // }
+
+
+
 
 
 
                     // @adam investigate what this is?
 
-                    // var indent = getIndentString(getLine(sel.anchorNode));
-                    // if (indent) {
-                    //     setTimeout(function () {
-                    //         insertHtml(indent);
-                    //     }, 0);
-                    // }
+                    var indent = getIndentString(getLine(sel.anchorNode));
+                    if (indent) {
+                        setTimeout(function () {
+                            insertHtml(indent);
+                        }, 0);
+                    }
                 }
             }
 
