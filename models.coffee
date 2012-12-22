@@ -12,30 +12,26 @@ noteSchema = new mongoose.Schema
   creationDate: Date
   modificationDate: Date
 
-noteSchema.methods.addDiv = (data, cb) ->
+# data params: timestamp, underneath_timestamp, text
+noteSchema.methods.syncLine = (data, cb) ->
   $ = cheerio.load(@content)
-  if data.underneath_id is "" or $("div[data-timestamp=#{data.underneath_id}]").length is 0
-    console.log "couldnt' find or at top"
-    @content = data.div + @content
 
-  else
-    $("div[data-timestamp=#{data.underneath_id}]").after(data.div)
-    @content = $.html()
+  $existingLine = $("div[data-timestamp=#{data.timestamp}]")
 
-  @save ->
-    cb
-      div: data.div
-      underneath_id: data.underneath_id
+  if $existingLine.length > 0 # update line
+    $existingLine.html(data.text)
 
-noteSchema.methods.updateDiv = (data, cb) ->
-  $ = cheerio.load(@content)
-  $("div[data-timestamp=#{data.div_id}]").html(data.new_text)
+  else # create line
+    newLine = "<div class='node' data-timestamp='#{data.timestamp}'>#{data.text}</div>"
+
+    if data.underneath_timestamp is "" or $("div[data-timestamp=#{data.underneath_timestamp}]").length is 0
+      $.root().prepend(newLine)
+
+    else
+      $("div[data-timestamp=#{data.underneath_timestamp}]").after(newLine)
+
   @content = $.html()
-
-  @save ->
-    cb
-      div_id: data.div_id
-      new_text: data.new_text
+  @save()
 
 noteSchema.methods.removeDiv = (data, cb) ->
   $ = cheerio.load(@content)

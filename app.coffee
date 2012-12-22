@@ -72,20 +72,13 @@ io.sockets.on 'connection', (socket) ->
   socket.on 'setNote', (note_id) =>
     socket.join(note_id)
     socket.note_id = note_id
+    Note.findById socket.note_id, (err, note) =>
+      @note = note
 
-  socket.on 'note.addDiv', (data) ->
-    console.log "addDiv", data
-    data.note_id = socket.note_id
-    Note.findById data.note_id, (err, note) ->
-      note.addDiv data, (params) ->
-        socket.broadcast.to(note.id).emit 'note.divAdded', params
+  socket.on 'note.syncLine', (data) =>
+    @note.syncLine data, (params) ->
+      socket.broadcast.to(note.id).emit 'note.lineSynced', params
 
-  socket.on 'note.updateDiv', (data) ->
-    console.log "updateDiv", data
-    data.note_id = socket.note_id
-    Note.findById data.note_id, (err, note) ->
-      note.updateDiv data, (params) ->
-        socket.broadcast.to(note.id).emit 'note.divUpdated', params
 
   socket.on 'note.removeDiv', (data) ->
     console.log "removeDiv", data

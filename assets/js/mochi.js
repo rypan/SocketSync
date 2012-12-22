@@ -1,18 +1,28 @@
 socket = io.connect()
 socket.emit('setNote', SocketSync.note_id)
 
-socket.on('note.divRemoved', function(data){
-  $("#editor div[data-timestamp="+data.div_id+"]").remove();
-});
+// socket.on('note.divRemoved', function(data){
+//   $("#editor div[data-timestamp="+data.div_id+"]").remove();
+// });
 
-socket.on('note.divAdded', function(data){
-  if (!data.underneath_id) {
-    // # insert at top
-    $("#editor").prepend(data.div);
-  } else {
-    // # insert data.div underneath the correct div
-    $("#editor div[data-timestamp="+data.underneath_id+"]").after(data.div);
-  }
+// socket.on('note.divAdded', function(data){
+//   if (!data.underneath_id) {
+//     // # insert at top
+//     $("#editor").prepend(data.div);
+//   } else {
+//     // # insert data.div underneath the correct div
+//     $("#editor div[data-timestamp="+data.underneath_id+"]").after(data.div);
+//   }
+// });
+
+$(document).on("focus.boundRemoveNode", "#editor", function(){
+    $(document).off(".boundRemoveNode")
+
+    $(document).on("DOMNodeInserted", function(e){
+        if (e.srcElement.nodeName !== "DIV") return;
+        $(e.srcElement).removeAttr('data-timestamp');
+        console.log('timestamp removed from new element');
+    });
 });
 
 var HostApp = {
@@ -21,84 +31,13 @@ var HostApp = {
 };
 
 var editor = (function () {
+    var syncTimeout;
     var noteEl;
     var titleEl;
     var titleHint;
     var editorEl;
     var noteChangeTimeoutId;
-
-    removeDiv = function($div) {
-        socket.emit('note.removeDiv', {
-            div_id: $div.data('timestamp')
-        });
-    }
-
-
-    $(document).on("focus.boundRemoveNode", "#editor", function(){
-        $(document).off(".boundRemoveNode")
-
-        $(document).on("DOMNodeRemoved", function(e){
-            // console.log("removing", e);
-            // console.log($(e.srcElement)[0].outerHTML);
-            // if (e.srcElement.nodeName === "BR") return;
-            // removeDiv($(e.srcElement));
-        });
-        $(document).on("DOMNodeInserted", function(e){
-            if (e.srcElement.nodeName !== "DIV") return;
-            if (isDuplicateTimestamp($(e.target))) {
-                // console.log('Dupe Timestamp, removing attr');
-                $(e.target).removeAttr('data-timestamp');
-            } else {
-                // console.log('stamping');
-                // $(e.target).data('timestamp', e.timeStamp);
-            }
-        });
-    });
-
-    function isDuplicateTimestamp($el) {
-        if (!$el) return false;
-
-        if ($("#editor div[data-timestamp="+$el.data('timestamp')+"]").not($el).length > 0){
-            return true;
-        }
-    }
-
-
-    function emitAddDiv($div) {
-
-        if (!$div.data('timestamp')) {
-            var isDupe = false;
-            var isNew = true;
-            $div.data('timestamp', Date.now());
-        } else {
-            var isNew = false;
-            var isDupe = isDuplicateTimestamp($div);
-        }
-
-        var html = outerHtmlWithTimestamp($div);
-        var myTimestamp = $div.data('timestamp');
-        var previousTimestamp = $div.prev().data('timestamp');
-
-        console.log("addDiv", html);
-        if (!isNew) {
-            emitUpdateDiv(html, myTimestamp);
-        } else {
-            var params = { div: html };
-            if (previousTimestamp) params["underneath_id"] = previousTimestamp;
-            socket.emit('note.addDiv', params);
-        }
-    }
-
-   function emitUpdateDiv(html, timestamp) {
-        socket.emit('note.updateDiv', {
-            div_id: timestamp,
-            new_text: html
-        });
-    }
-
-    function outerHtmlWithTimestamp(div) {
-        return "<div class='node' data-timestamp='"+div.data('timestamp')+"'>"+(div.html() || div.text())+"</div>"
-    }
+    var linesArray = {};
 
     function getSelRange() {
         var selection = window.getSelection();
@@ -156,6 +95,29 @@ var editor = (function () {
         updateTitleHint();
     }
 
+    function syncLine($line) {
+        var timestamp = $line.data('timestamp');
+        linesArray[timestamp] = $line.html();
+        socket.emit('note.syncLine', {
+            timestamp: timestamp,
+            underneath_timestamp: $line.prev().data('timestamp'),
+            text: linesArray[timestamp]
+        });
+    }
+
+    function createLine($line) {
+        var timestamp = Date.now();
+        $line.data('timestamp', timestamp);
+        linesArray[timestamp] = $line.html()
+        syncLine($line);
+    }
+
+    function handleSync($line) {
+        var timestamp = $line.data('timestamp');
+        if (!timestamp) return createLine($line);
+        if (linesArray[timestamp] !== $line.html()) return syncLine($line);
+    }
+
     function handleContentChange() {
         var line = editorEl.firstChild;
         while (line) {
@@ -164,6 +126,8 @@ var editor = (function () {
             } else {
                 line.classList.remove('task');
             }
+
+            handleSync($(line))
 
             line = line.nextSibling;
         }
@@ -347,7 +311,12 @@ var editor = (function () {
         }, false);
 
         editorEl.addEventListener('DOMSubtreeModified', function (event) {
-            handleContentChange();
+            // clearTimeout(syncTimeout);
+            // syncTimeout = setTimeout(function(){
+                // console.log('hi')
+                handleContentChange();
+            // }, 500);
+
         }, false);
         editorEl.addEventListener('paste', function (event) {
             event.preventDefault();
@@ -421,42 +390,6 @@ var editor = (function () {
                     insertHtml('\t');
                 } else if (keyCode === 13) { // return
                     var sel = window.getSelection();
-
-                    $theNode = $(sel.anchorNode);
-
-                    while (!$theNode.hasClass('node')) {
-                        console.log($theNode);
-                        $theNode = $theNode.parent();
-                    }
-
-                    if ($theNode.parent().hasClass('node')) {
-                        $theNode.insertAfter($theNode.parent());
-                    }
-
-                    console.log($theNode);
-
-                    // if (!$theNode.data('timestamp')) {
-                    //     $theNode.data('timestamp', Date.now());
-                    // }
-
-                    // console.log("timestamped", $theNode.data('timestamp'))
-
-                    // if ($theNode.parent().attr('id') === 'editor') {
-                    //     console.log('inside');
-                    //     $theNode.insertAfter($theNode.parent());
-                    // }
-
-
-                    emitAddDiv($theNode);
-                    // // }
-
-
-
-
-
-
-                    // @adam investigate what this is?
-
                     var indent = getIndentString(getLine(sel.anchorNode));
                     if (indent) {
                         setTimeout(function () {
