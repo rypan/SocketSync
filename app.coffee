@@ -80,12 +80,9 @@ io.sockets.on 'connection', (socket) ->
       socket.broadcast.to(note.id).emit 'note.lineSynced', params
 
 
-  socket.on 'note.removeDiv', (data) ->
-    console.log "removeDiv", data
-    data.note_id = socket.note_id
-    Note.findById data.note_id, (err, note) ->
-      note.removeDiv data, (params) ->
-        socket.broadcast.to(note.id).emit 'note.divRemoved', params
+  socket.on 'note.removeLine', (data) =>
+    @note.removeLine data, (params) ->
+      socket.broadcast.to(note.id).emit 'note.lineSynced', params
 
 server.listen app.get('port'), ->
   console.log("Express server listening on port " + app.get('port')) unless process.env.SUBDOMAIN

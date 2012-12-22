@@ -15,16 +15,6 @@ socket.emit('setNote', SocketSync.note_id)
 //   }
 // });
 
-$(document).on("focus.boundRemoveNode", "#editor", function(){
-    $(document).off(".boundRemoveNode")
-
-    $(document).on("DOMNodeInserted", function(e){
-        if (e.srcElement.nodeName !== "DIV") return;
-        $(e.srcElement).removeAttr('data-timestamp');
-        console.log('timestamp removed from new element');
-    });
-});
-
 var HostApp = {
     noteChanged: function(){},
     triggerPaste: function(){}
@@ -102,6 +92,14 @@ var editor = (function () {
             timestamp: timestamp,
             underneath_timestamp: $line.prev().data('timestamp'),
             text: linesArray[timestamp]
+        });
+    }
+
+    function removeLine($line) {
+        timestamp = $line.data('timestamp');
+        delete linesArray[timestamp];
+        socket.emit('note.removeLine', {
+            timestamp: timestamp
         });
     }
 
@@ -277,6 +275,23 @@ var editor = (function () {
     //         return changes;
     //     });
     // }
+
+    $(document).on("focus.boundRemoveNode", "#editor", function(){
+        $(document).off(".boundRemoveNode")
+
+        $(document).on("DOMNodeRemoved", function(e){
+            if (e.srcElement.nodeName !== "DIV") return;
+            $line = $(e.srcElement);
+            if ($line.hasClass('node')) return removeLine($line);
+        });
+
+        $(document).on("DOMNodeInserted", function(e){
+            if (e.srcElement.nodeName !== "DIV") return;
+            $(e.srcElement).removeAttr('data-timestamp');
+            console.log('timestamp removed from new element');
+        });
+    });
+
 
     window.addEventListener('load', function () {
         noteEl = document.getElementById('note');

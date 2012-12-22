@@ -33,14 +33,12 @@ noteSchema.methods.syncLine = (data, cb) ->
   @content = $.html()
   @save()
 
-noteSchema.methods.removeDiv = (data, cb) ->
+# data params: timestamp
+noteSchema.methods.removeLine = (data, cb) ->
   $ = cheerio.load(@content)
-  $("div[data-timestamp=#{data.div_id}]").remove()
+  $("div[data-timestamp=#{data.timestamp}]").remove()
   @content = $.html()
-
-  @save ->
-    cb
-      div_id: data.div_id
+  @save()
 
 noteSchema.pre 'save', (next) ->
   @updated_at = new Date
