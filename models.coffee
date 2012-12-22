@@ -14,6 +14,8 @@ noteSchema = new mongoose.Schema
 
 # data params: timestamp, underneath_timestamp, text
 noteSchema.methods.syncLine = (data, cb) ->
+  if !data.timestamp then return
+
   $ = cheerio.load(@content)
 
   $existingLine = $("div[data-timestamp=#{data.timestamp}]")
@@ -31,14 +33,16 @@ noteSchema.methods.syncLine = (data, cb) ->
       $("div[data-timestamp=#{data.underneath_timestamp}]").after(newLine)
 
   @content = $.html()
-  @save()
+  @save ->
+    cb(data)
 
 # data params: timestamp
 noteSchema.methods.removeLine = (data, cb) ->
   $ = cheerio.load(@content)
   $("div[data-timestamp=#{data.timestamp}]").remove()
   @content = $.html()
-  @save()
+  @save ->
+    cb(data)
 
 noteSchema.pre 'save', (next) ->
   @updated_at = new Date

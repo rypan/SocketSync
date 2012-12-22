@@ -76,13 +76,13 @@ io.sockets.on 'connection', (socket) ->
       @note = note
 
   socket.on 'note.syncLine', (data) =>
-    @note.syncLine data, (params) ->
-      socket.broadcast.to(note.id).emit 'note.lineSynced', params
+    @note.syncLine data, (params) =>
+      socket.broadcast.to(@note.id).emit 'note.lineSynced', params
 
 
   socket.on 'note.removeLine', (data) =>
-    @note.removeLine data, (params) ->
-      socket.broadcast.to(note.id).emit 'note.lineSynced', params
+    @note.removeLine data, (params) =>
+      socket.broadcast.to(@note.id).emit 'note.lineRemoved', params
 
 server.listen app.get('port'), ->
   console.log("Express server listening on port " + app.get('port')) unless process.env.SUBDOMAIN

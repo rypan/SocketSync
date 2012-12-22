@@ -12,4 +12,4 @@ html
   #note
     input#title.title(type="text")
     #title-hint.text-hint Title
-    | <div id="editor">!{note.content ? note.content : "<div class='node'><br /></div>"}</div>
+    | <div id="editor">!{note.content ? note.content : "<div class='node' data-timestamp='"+Date.now()+"'><br /></div>"}</div>

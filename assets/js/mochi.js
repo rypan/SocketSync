@@ -15,6 +15,48 @@ socket.emit('setNote', SocketSync.note_id)
 //   }
 // });
 
+var addingRemoteChanges = false;
+var linesArray = {};
+
+var lineForTimestamp = function (timestamp) {
+    return $("#editor div").filter(function(){
+        return $(this).data('timestamp') == timestamp;
+    });
+}
+
+socket.on('note.lineSynced', function(data){
+    addingRemoteChanges = true;
+
+    var $existingLine = lineForTimestamp(data.timestamp);
+
+    if ($existingLine.length > 0) {
+        // update line
+        $existingLine.html(data.text)
+
+    } else {
+        // create line
+        var newLine = "<div class='node' data-timestamp='"+data.timestamp+"'>"+data.text+"</div>";
+
+        if (data.underneath_timestamp == "" || lineForTimestamp(data.underneath_timestamp).length == 0) {
+          $("#editor").prepend(newLine);
+        } else {
+          lineForTimestamp(data.underneath_timestamp).after(newLine)
+        }
+    }
+
+    linesArray[data.timestamp] = data.text;
+
+    addingRemoteChanges = false;
+});
+
+socket.on('note.lineRemoved', function(data){
+    addingRemoteChanges = true;
+    lineForTimestamp(data.timestamp).remove()
+    delete linesArray[data.timestamp];
+    addingRemoteChanges = false;
+});
+
+
 var HostApp = {
     noteChanged: function(){},
     triggerPaste: function(){}
@@ -27,7 +69,6 @@ var editor = (function () {
     var titleHint;
     var editorEl;
     var noteChangeTimeoutId;
-    var linesArray = {};
 
     function getSelRange() {
         var selection = window.getSelection();
@@ -103,17 +144,8 @@ var editor = (function () {
         });
     }
 
-    function createLine($line) {
-        var timestamp = Date.now();
-        $line.data('timestamp', timestamp);
-        linesArray[timestamp] = $line.html()
-        syncLine($line);
-    }
-
     function handleSync($line) {
-        var timestamp = $line.data('timestamp');
-        if (!timestamp) return createLine($line);
-        if (linesArray[timestamp] !== $line.html()) return syncLine($line);
+        if (linesArray[$line.data('timestamp')] !== $line.html()) return syncLine($line);
     }
 
     function handleContentChange() {
@@ -280,14 +312,17 @@ var editor = (function () {
         $(document).off(".boundRemoveNode")
 
         $(document).on("DOMNodeRemoved", function(e){
+            if (addingRemoteChanges) return;
             if (e.srcElement.nodeName !== "DIV") return;
             $line = $(e.srcElement);
             if ($line.hasClass('node')) return removeLine($line);
         });
 
         $(document).on("DOMNodeInserted", function(e){
+            if (addingRemoteChanges) return;
             if (e.srcElement.nodeName !== "DIV") return;
             $(e.srcElement).removeAttr('data-timestamp');
+            $(e.srcElement).data('timestamp', Date.now());
             console.log('timestamp removed from new element');
         });
     });
@@ -326,10 +361,11 @@ var editor = (function () {
         }, false);
 
         editorEl.addEventListener('DOMSubtreeModified', function (event) {
+            if (!addingRemoteChanges) handleContentChange();
             // clearTimeout(syncTimeout);
             // syncTimeout = setTimeout(function(){
                 // console.log('hi')
-                handleContentChange();
+                // handleContentChange();
             // }, 500);
 
         }, false);
