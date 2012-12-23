@@ -136,8 +136,7 @@ var editor = (function () {
         });
     }
 
-    function removeLine($line) {
-        timestamp = $line.data('timestamp');
+    function removeLine(timestamp) {
         delete linesArray[timestamp];
         socket.emit('note.removeLine', {
             timestamp: timestamp
@@ -146,6 +145,17 @@ var editor = (function () {
 
     function handleSync($line) {
         if (linesArray[$line.data('timestamp')] !== $line.html()) return syncLine($line);
+    }
+
+    function cleanupSync() {
+        for (i in linesArray) {
+            var line = lineForTimestamp(i);
+            if (line.length === 0) return removeLine(i);
+            // if (line.html() === "") {
+            //     // line.remove();
+            //     return removeLine(i);
+            // }
+        }
     }
 
     function handleContentChange() {
@@ -162,8 +172,12 @@ var editor = (function () {
             line = line.nextSibling;
         }
 
+        cleanupSync();
+
         handleNoteChange();
     }
+
+    window.handleContentChange = handleContentChange;
 
     function handleSelectionChange() {
         handleNoteChange();
@@ -315,7 +329,7 @@ var editor = (function () {
             if (addingRemoteChanges) return;
             if (e.srcElement.nodeName !== "DIV") return;
             $line = $(e.srcElement);
-            if ($line.hasClass('node')) return removeLine($line);
+            if ($line.hasClass('node')) return removeLine($line.data('timestamp'));
         });
 
         $(document).on("DOMNodeInserted", function(e){
@@ -323,7 +337,6 @@ var editor = (function () {
             if (e.srcElement.nodeName !== "DIV") return;
             $(e.srcElement).removeAttr('data-timestamp');
             $(e.srcElement).data('timestamp', Date.now());
-            console.log('timestamp removed from new element');
         });
     });
 
@@ -361,12 +374,11 @@ var editor = (function () {
         }, false);
 
         editorEl.addEventListener('DOMSubtreeModified', function (event) {
-            if (!addingRemoteChanges) handleContentChange();
-            // clearTimeout(syncTimeout);
-            // syncTimeout = setTimeout(function(){
-                // console.log('hi')
-                // handleContentChange();
-            // }, 500);
+            syncTimeout = setTimeout(function(){
+                console.log('sync')
+                clearTimeout(syncTimeout);
+                if (!addingRemoteChanges) handleContentChange();
+            }, 500);
 
         }, false);
         editorEl.addEventListener('paste', function (event) {
