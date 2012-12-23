@@ -14,6 +14,7 @@ window.MochiEditor = (noteId) ->
   noteChangeTimeoutId = undefined
   addingRemoteChanges = false
   linesArray = {}
+
   $titleEl.on "focus", ->
     $titleHint.addClass "text-hint-focused"
 
@@ -21,26 +22,24 @@ window.MochiEditor = (noteId) ->
     $titleHint.removeClass "text-hint-focused"
 
   $titleEl.on "keydown", (event) ->
-    if event.keyCode is 13 or event.keyCode is 40 # return
-# down
-
-      # return
+    if event.keyCode is 13 or event.keyCode is 40
       focusEditor() # @checkup this should be ok though
 
       # Prevent newline from being inserted into editor.
       event.preventDefault()
+
     setTimeout handleTitleChange, 0 # @checkup
 
   $titleEl.on "cut", ->
     setTimeout handleTitleChange, 0
 
-  $titleEl.on "paste", (->
+  $titleEl.on "paste", ->
     setTimeout handleTitleChange, 0
-  ), false
+
   $el.on "DOMSubtreeModified", (event) ->
     syncTimeout = setTimeout(->
       clearTimeout syncTimeout
-      handleContentChange()  unless addingRemoteChanges
+      handleContentChange() unless addingRemoteChanges
     , 500)
 
   $el.on "paste", (event) ->
@@ -127,20 +126,21 @@ window.MochiEditor = (noteId) ->
 
   #     handleSelectionChange();
   # });
-  $el.on "mouseup", (event) ->
-    $el = $(event.target)
-    toggleCheckbox $el  if $el.hasClass("checkbox")
-    handleSelectionChange()
+  # $el.on "mouseup", (event) ->
+  #   # @checkup change $el
+  #   $el = $(event.target)
+  #   toggleCheckbox $el  if $el.hasClass("checkbox")
+  #   handleSelectionChange()
 
 
   # Disable drag.
-  $el.on "dragstart", (event) ->
-    event.preventDefault()
+  # $el.on "dragstart", (event) ->
+  #   event.preventDefault()
 
 
   # Disable external drop.
-  $el.on "dragover", (event) ->
-    event.preventDefault()
+  # $el.on "dragover", (event) ->
+  #   event.preventDefault()
 
 
   # @checkup i think this is only used for pasting
@@ -157,8 +157,7 @@ window.MochiEditor = (noteId) ->
   # }
   lineForTimestamp = (timestamp) ->
     $("#editor div").filter ->
-      $(this).data("timestamp") is timestamp
-
+      `$(this).data("timestamp") == timestamp`
 
   setEditable = (editable) ->
     if editable
@@ -166,14 +165,14 @@ window.MochiEditor = (noteId) ->
     else
       $el.removeAttr "contenteditable"
 
-  outlineChildNodes = (node, lines, indent) ->
-    child = node.firstChild
-    while child
-      name = (child.tagName or "TXT")
-      name = name.toLowerCase()  if name is "DIV" or name is "BR" or name is "TXT"
-      lines.push indent + name
-      outlineChildNodes child, lines, indent + "    "
-      child = child.nextSibling
+  # outlineChildNodes = (node, lines, indent) ->
+  #   child = node.firstChild
+  #   while child
+  #     name = (child.tagName or "TXT")
+  #     name = name.toLowerCase()  if name is "DIV" or name is "BR" or name is "TXT"
+  #     lines.push indent + name
+  #     outlineChildNodes child, lines, indent + "    "
+  #     child = child.nextSibling
 
 
   # @checkup this just calls some shit on HostApp
@@ -193,7 +192,6 @@ window.MochiEditor = (noteId) ->
       $titleHint.show()
 
   handleTitleChange = ->
-
     # handleNoteChange();
     updateTitleHint()
 
@@ -215,9 +213,9 @@ window.MochiEditor = (noteId) ->
 
 
   cleanupSync = ->
-    for i of linesArray
-      line = lineForTimestamp(i)
-      return removeLine(i)  if line.length is 0
+    for timestamp, line of linesArray
+      if lineForTimestamp(timestamp).length is 0
+        return removeLine(timestamp)
 
   handleContentChange = ->
     $line = $el.children(":first")
@@ -377,14 +375,14 @@ window.MochiEditor = (noteId) ->
   #     });
   # }
   $(document).on "DOMNodeRemoved", (e) ->
-    return  if addingRemoteChanges
-    return  if e.srcElement.nodeName isnt "DIV"
+    return if addingRemoteChanges
+    return if e.srcElement.nodeName isnt "DIV"
     $line = $(e.srcElement)
-    removeLine $line.data("timestamp")  if $line.hasClass("node")
+    removeLine $line.data("timestamp") if $line.hasClass("node")
 
   $(document).on "DOMNodeInserted", (e) ->
-    return  if addingRemoteChanges
-    return  if e.srcElement.nodeName isnt "DIV"
+    return if addingRemoteChanges # @possible use '?'
+    return if e.srcElement.nodeName isnt "DIV"
     $(e.srcElement).removeAttr "data-timestamp"
     $(e.srcElement).data "timestamp", Date.now()
 
@@ -838,15 +836,17 @@ window.MochiEditor = (noteId) ->
   socket.on "note.lineSynced", (data) ->
     addingRemoteChanges = true
     $existingLine = lineForTimestamp(data.timestamp)
-    if $existingLine.length > 0
 
+    if $existingLine.length > 0
       # update line
       $existingLine.html data.text
-    else
 
+    else
       # create line
       newLine = "<div class='node' data-timestamp='" + data.timestamp + "'>" + data.text + "</div>"
-      if data.underneath_timestamp is "" or lineForTimestamp(data.underneath_timestamp).length is 0
+
+        # @possible ==
+      if !data.underneath_timestamp? or lineForTimestamp(data.underneath_timestamp).length is 0
         $("#editor").prepend newLine
       else
         lineForTimestamp(data.underneath_timestamp).after newLine
