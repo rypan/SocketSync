@@ -13,4 +13,4 @@ html
     #title-hint.text-hint Title
     | <div id="editor">!{note.content ? note.content : "<div class='node' data-timestamp='"+Date.now()+"'><br /></div>"}</div>
 
-  | <script> $(function(){ var editor = new MochiEditor("#{note.id}"); }); </script>
+  | <script> $(function(){ var editor = new MochiEditor("#{note.id}", prompt('Enter a username.')); }); </script>

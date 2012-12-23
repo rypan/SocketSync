@@ -3,9 +3,10 @@ HostApp =
 
   triggerPaste: ->
 
-window.MochiEditor = (noteId) ->
+window.MochiEditor = (noteId, username) ->
   self = this
   noteId = noteId
+  username = username || "noname"
   $el = $("#editor")
   $titleEl = $("#title")
   $titleHint = $("#title-hint")
@@ -14,6 +15,8 @@ window.MochiEditor = (noteId) ->
   noteChangeTimeoutId = undefined
   addingRemoteChanges = false
   linesArray = {}
+  $cursor = $("<span id='cursor'><span class='name'></span></span>")
+  $noteEl.append($cursor)
 
   $titleEl.on "focus", ->
     $titleHint.addClass "text-hint-focused"
@@ -185,6 +188,41 @@ window.MochiEditor = (noteId) ->
   #         HostApp.noteChanged();
   #     }, 70);
   # }
+
+  setOtherUsersCursorOnLine = ($line, username) ->
+    console.log($line, username)
+    lastNode = $line[0].childNodes.item($line[0].childNodes.length - 1) || $line[0]
+
+    if lastNode.nodeType is 3 # last child is a text node, wrap it in a span
+      text = $line.html()
+      lastChar = text.substr(-1)
+      newText = text.slice(0, -1) + "<span id='getPos'>#{lastChar}</span>"
+      $line.html(newText)
+      offsetRight = $("#getPos").offset().left + $("#getPos").width()
+      offsetTop = $("#getPos").offset().top
+      $line.html(text)
+
+    else if lastNode.nodeName is "BR"
+      $br = $line.children(":last")
+      $br.remove()
+      $line.append("<span id='getPos'><br /></span>")
+      offsetRight = $("#getPos").offset().left + $("#getPos").width()
+      offsetTop = $("#getPos").offset().top
+      $line.find("#getPos").remove()
+      $line.append("<br />")
+
+    else
+      offsetRight = $(lastNode).offset().left + $(lastNode).width()
+      offsetTop = $(lastNode).offset().top
+
+    $cursor.css
+      left: offsetRight
+      top: offsetTop
+
+    .find(".name").text(username)
+
+    $cursor.show()
+
   updateTitleHint = ->
     if $titleEl.val()
       $titleHint.hide()
@@ -832,8 +870,10 @@ window.MochiEditor = (noteId) ->
   # }
   setEditable true
   socket = io.connect()
-  socket.emit "setNote", noteId
-  socket.on "note.lineSynced", (data) ->
+  socket.emit "setup",
+    noteId: noteId
+    username: username
+  socket.on "note.lineSynced", (data, username) ->
     addingRemoteChanges = true
     $existingLine = lineForTimestamp(data.timestamp)
 
@@ -841,19 +881,24 @@ window.MochiEditor = (noteId) ->
       # update line
       $existingLine.html data.text
 
+      setOtherUsersCursorOnLine($existingLine, username)
+
     else
       # create line
-      newLine = "<div class='node' data-timestamp='" + data.timestamp + "'>" + data.text + "</div>"
+      $newLine = $("<div class='node' data-timestamp='" + data.timestamp + "'>" + data.text + "</div>")
 
         # @possible ==
       if !data.underneath_timestamp? or lineForTimestamp(data.underneath_timestamp).length is 0
-        $("#editor").prepend newLine
+        $("#editor").prepend $newLine
       else
-        lineForTimestamp(data.underneath_timestamp).after newLine
+        lineForTimestamp(data.underneath_timestamp).after $newLine
+
+      setOtherUsersCursorOnLine($newLine, username)
+
     linesArray[data.timestamp] = data.text
     addingRemoteChanges = false
 
-  socket.on "note.lineRemoved", (data) ->
+  socket.on "note.lineRemoved", (data, username) ->
     addingRemoteChanges = true
     lineForTimestamp(data.timestamp).remove()
     delete linesArray[data.timestamp]

@@ -69,20 +69,21 @@ app.get '/note/:id', (req, res) ->
 
 io.sockets.on 'connection', (socket) ->
 
-  socket.on 'setNote', (note_id) =>
-    socket.join(note_id)
-    socket.note_id = note_id
-    Note.findById socket.note_id, (err, note) =>
+  socket.on 'setup', (params) =>
+    socket.noteId = params.noteId
+    socket.username = params.username
+    socket.join(socket.noteId)
+    Note.findById socket.noteId, (err, note) =>
       @note = note
 
   socket.on 'note.syncLine', (data) =>
     @note.syncLine data, (params) =>
-      socket.broadcast.to(@note.id).emit 'note.lineSynced', params
+      socket.broadcast.to(@note.id).emit 'note.lineSynced', params, socket.username
 
 
   socket.on 'note.removeLine', (data) =>
     @note.removeLine data, (params) =>
-      socket.broadcast.to(@note.id).emit 'note.lineRemoved', params
+      socket.broadcast.to(@note.id).emit 'note.lineRemoved', params, socket.username
 
 server.listen app.get('port'), ->
   console.log("Express server listening on port " + app.get('port')) unless process.env.SUBDOMAIN
