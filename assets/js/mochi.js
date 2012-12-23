@@ -375,7 +375,6 @@ var editor = (function () {
 
         editorEl.addEventListener('DOMSubtreeModified', function (event) {
             syncTimeout = setTimeout(function(){
-                console.log('sync')
                 clearTimeout(syncTimeout);
                 if (!addingRemoteChanges) handleContentChange();
             }, 500);
