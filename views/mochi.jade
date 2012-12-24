@@ -5,7 +5,6 @@ html
     script(src="http://ajax.googleapis.com/ajax/libs/jquery/1.8.3/jquery.min.js")
     != js("vendor/jcade.js")
     != js("vendor/socket.io.js")
-    != js("vendor/rangy.js")
     != js("mochi-refactored-coffee")
     != css("mochi")
 
@@ -14,4 +13,4 @@ html
     #title-hint.text-hint Title
     | <div id="editor">!{note.content ? note.content : "<div class='node' data-timestamp='"+Date.now()+"'><br /></div>"}</div>
 
-  | <script> $(function(){ window.editor = new MochiEditor("#{note.id}", "Adam"); }); </script>
+  | <script> $(function(){ var editor = new MochiEditor("#{note.id}", prompt('Enter a username.')); }); </script>

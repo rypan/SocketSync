@@ -494,23 +494,27 @@ window.MochiEditor = (noteId, username) ->
   #     return anchorIndex;
   # }
 
-  # preservingSelection = (callback) ->
-  #   sel = window.getSelection()
-  #   anchorNode = sel.anchorNode
-  #   anchorOffset = sel.anchorOffset
-  #   focusNode = sel.focusNode
-  #   focusOffset = sel.focusOffset
-  #   anchorIndex = indexFromNodeAndOffset(editorEl, anchorNode, anchorOffset)
-  #   focusIndex = indexFromNodeAndOffset(editorEl, focusNode, focusOffset)
-  #   changes = callback()
-  #   if changes
-  #     changes.forEach (change) ->
-  #       index = change[0]
-  #       delta = change[1]
-  #       anchorIndex = adjustIndex(anchorIndex, index, delta)
-  #       focusIndex = adjustIndex(focusIndex, index, delta)
+  # function preservingSelection(callback) {
+  #     var sel = window.getSelection();
+  #     var anchorNode = sel.anchorNode;
+  #     var anchorOffset = sel.anchorOffset;
+  #     var focusNode = sel.focusNode;
+  #     var focusOffset = sel.focusOffset;
+  #     var anchorIndex = indexFromNodeAndOffset(editorEl, anchorNode, anchorOffset);
+  #     var focusIndex = indexFromNodeAndOffset(editorEl, focusNode, focusOffset);
 
-  #   selectRange anchorIndex, focusIndex
+  #     var changes = callback();
+  #     if (changes) {
+  #         changes.forEach(function (change) {
+  #             var index = change[0];
+  #             var delta = change[1];
+  #             anchorIndex = adjustIndex(anchorIndex, index, delta);
+  #             focusIndex = adjustIndex(focusIndex, index, delta);
+  #         });
+  #     }
+
+  #     selectRange(anchorIndex, focusIndex);
+  # }
 
   # isMaterialElement = function(node) {
   #     return node.nodeType === Node.TEXT_NODE || node.tagName === 'IMG' || node.tagName === 'BR';
@@ -679,10 +683,27 @@ window.MochiEditor = (noteId, username) ->
   #     return rangeA.compareBoundaryPoints(Range.START_TO_START, rangeB) === -1;
   # }
 
-  self.getSelectedLines = ->
-    sel = rangy.getSelection()
-    return [] unless sel.rangeCount > 0
-    sel.getRangeAt(0).getNodes([3])
+  # function getSelectedLines() {
+  #     var sel = window.getSelection();
+  #     var first = getLine(sel.anchorNode);
+  #     var last = getLine(sel.focusNode);
+  #     if (isBefore(last, 0, first, 0)) {
+  #         var temp = first;
+  #         first = last;
+  #         last = temp;
+  #     }
+  #     var node = first;
+  #     var divs = [];
+  #     while (node) {
+  #         divs.push(node);
+  #         if (node == last) {
+  #             break;
+  #         }
+  #         node = node.nextSibling;
+  #     }
+
+  #     return divs;
+  # }
 
   # function flattenNode(node) {
   #     var it = document.createNodeIterator(
@@ -939,5 +960,3 @@ window.MochiEditor = (noteId, username) ->
     delete linesArray[data.timestamp]
 
     addingRemoteChanges = false
-
-  return self
