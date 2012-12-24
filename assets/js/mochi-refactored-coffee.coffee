@@ -5,74 +5,77 @@
     return string + this;
 };
 `
+Helper =
 
-saveSelection = ->
-  if window.getSelection
-    sel = window.getSelection()
-    return sel.getRangeAt(0)  if sel.getRangeAt and sel.rangeCount
-  else return document.selection.createRange()  if document.selection and document.selection.createRange
-  null
-
-restoreSelection = (range) ->
-  if range
+  saveSelection: ->
     if window.getSelection
       sel = window.getSelection()
-      sel.removeAllRanges()
-      sel.addRange range
-    else range.select()  if document.selection and range.select
+      return sel.getRangeAt(0)  if sel.getRangeAt and sel.rangeCount
+    else return document.selection.createRange()  if document.selection and document.selection.createRange
+    null
 
-getPasteData = (ev, cb) ->
+  restoreSelection: (range) ->
+    if range
+      if window.getSelection
+        sel = window.getSelection()
+        sel.removeAllRanges()
+        sel.addRange range
+      else range.select()  if document.selection and range.select
 
-  initialSelection = saveSelection()
+  getPasteData: (ev, cb) ->
 
-  $elem = $("<div id='tempPaste' contenteditable='true'>Paste</div>")
-  $("body").append($elem)
-  $elem.focus()
-  el = $elem[0]
+    initialSelection = Helper.saveSelection()
+
+    $elem = $("<div id='tempPaste' contenteditable='true'>Paste</div>")
+    $("body").append($elem)
+    $elem.focus()
+    el = $elem[0]
 
 
-  handlepaste = (elem, e) ->
-    savedcontent = elem.innerHTML
-    if e and e.clipboardData and e.clipboardData.getData # Webkit - get data from clipboard, put into editdiv, cleanup, then cancel event
-      if /text\/html/.test(e.clipboardData.types)
-        elem.innerHTML = e.clipboardData.getData("text/html")
-      else if /text\/plain/.test(e.clipboardData.types)
-        elem.innerHTML = e.clipboardData.getData("text/plain")
-      else
+    handlepaste = (elem, e) ->
+      savedcontent = elem.innerHTML
+      if e and e.clipboardData and e.clipboardData.getData # Webkit - get data from clipboard, put into editdiv, cleanup, then cancel event
+        if /text\/html/.test(e.clipboardData.types)
+          elem.innerHTML = e.clipboardData.getData("text/html")
+        else if /text\/plain/.test(e.clipboardData.types)
+          elem.innerHTML = e.clipboardData.getData("text/plain")
+        else
+          elem.innerHTML = ""
+        waitforpastedata elem, savedcontent
+      else # Everything else - empty editdiv and allow browser to paste content into it, then cleanup
         elem.innerHTML = ""
-      waitforpastedata elem, savedcontent
-    else # Everything else - empty editdiv and allow browser to paste content into it, then cleanup
-      elem.innerHTML = ""
-      waitforpastedata elem, savedcontent
-  waitforpastedata = (elem, savedcontent) ->
-    if elem.childNodes and elem.childNodes.length > 0
-      return processpaste elem, savedcontent
-    else
-      that =
-        e: elem
-        s: savedcontent
+        waitforpastedata elem, savedcontent
+    waitforpastedata = (elem, savedcontent) ->
+      if elem.childNodes and elem.childNodes.length > 0
+        return processpaste elem, savedcontent
+      else
+        that =
+          e: elem
+          s: savedcontent
 
-      that.callself = ->
-        return waitforpastedata that.e, that.s
+        that.callself = ->
+          return waitforpastedata that.e, that.s
 
-      setTimeout ->
-        return that.callself()
-      , 20
+        setTimeout ->
+          return that.callself()
+        , 20
 
-      return
-  processpaste = (elem, savedcontent) ->
-    pasteddata = elem.innerHTML
+        return
+    processpaste = (elem, savedcontent) ->
+      $elem = $(elem)
+      $elem.find("[data-timestamp]").removeAttr('data-timestamp').data('timestamp', null)
+      pasteddata = $elem[0].innerHTML
 
-    #^^Alternatively loop through dom (elem.childNodes or elem.getElementsByTagName) here
-    elem.innerHTML = savedcontent
+      #^^Alternatively loop through dom (elem.childNodes or elem.getElementsByTagName) here
+      elem.innerHTML = savedcontent
 
-    # Do whatever with gathered data;
-    $elem.remove()
-    $("#editor").focus()
-    restoreSelection(initialSelection)
-    cb(pasteddata)
+      # Do whatever with gathered data;
+      $elem.remove()
+      $("#editor").focus()
+      Helper.restoreSelection(initialSelection)
+      cb(pasteddata)
 
-  handlepaste(el, ev)
+    handlepaste(el, ev)
 
 HostApp =
   noteChanged: ->
@@ -120,18 +123,16 @@ window.MochiEditor = (noteId, username) ->
   $el.on "focus.bindDOMSubtreeModified", ->
     $el.off ".bindDOMSubtreeModified"
     $el.on "DOMSubtreeModified", (event) ->
-      syncTimeouts.push setTimeout(->
-        clearTimeout(i) for i in syncTimeouts
-        self.cursorCharacterOffset = getCaretCharacterOffsetWithin(event.target)
-        handleContentChange() unless addingRemoteChanges
-        self.cursorCharacterOffset = undefined
-      , 500)
+      queueContentChange(event)
 
   $el.on "paste", (event) ->
-    getPasteData event, (pastedData) ->
+    Helper.getPasteData event, (pastedData) ->
       event.preventDefault()
+      addingRemoteChanges = true #don't sync yet
       self.pasteText(pastedData)
-
+      addingRemoteChanges = false
+      self.timestampNodes()
+      self.flattenNodes()
 
     # HostApp.triggerPaste()
 
@@ -218,6 +219,14 @@ window.MochiEditor = (noteId, username) ->
   #     );
   #     return [start, end];
   # }
+
+  queueContentChange = (event) ->
+    syncTimeouts.push setTimeout(->
+        clearTimeout(i) for i in syncTimeouts
+        self.cursorCharacterOffset = if event then getCaretCharacterOffsetWithin(event.target) else undefined
+        handleContentChange() unless addingRemoteChanges
+        self.cursorCharacterOffset = undefined
+      , 500)
 
   makeCursor = (username) ->
     return if cursors[username]
@@ -571,6 +580,16 @@ window.MochiEditor = (noteId, username) ->
     $(e.srcElement).data "timestamp", Date.now()
 
 
+  self.timestampNodes = ->
+    $nodes = $el.find(".node").filter ->
+      !$(@).data('timestamp')
+
+    i = 0
+
+    $nodes.each ->
+      $(@).data('timestamp', "" + Date.now() + i)
+      i++
+
   # adjustIndex = function(anchorIndex, index, delta) {
   #     if (delta > 0) {
   #         if (index <= anchorIndex) {
@@ -843,89 +862,29 @@ window.MochiEditor = (noteId, username) ->
 
 
   self.pasteText = (text) ->
-    origScrollTop = document.body.scrollTop
-    if text.indexOf("\n") < 0
-      insertHtml text
-    else
+    insertHtml text
 
-      # Delete selection, if a non-empty selection exists.
-      selRange = getSelRange()
-      document.execCommand "delete", false, null  if selRange[0] isnt selRange[1]
+  self.flattenNodes = ->
 
-      # Create container for making edits to nodes.
-      container = document.createElement("div")
-      container.innerHTML = editorEl.innerHTML
-      pivotIndex = selRange[0]
-      pivot = findNodeAndOffsetRelTo(container, pivotIndex)
-      pivotNode = pivot[0]
-      pivotOffset = pivot[1]
-      lineDiv = pivotNode
-      lineDiv = lineDiv.parentNode  while lineDiv isnt container and lineDiv.parentNode isnt container
-      range = document.createRange()
-      range.selectNodeContents lineDiv
-      range.setEnd pivotNode, pivotOffset
-      startContent = range.cloneContents()
-      range.selectNodeContents lineDiv
-      range.setStart pivotNode, pivotOffset
-      endContent = range.cloneContents()
-
-      # The line that new lines should be inserted before.
-      anchorLine = lineDiv.nextSibling
-      container.removeChild lineDiv
-      pastedLength = text.length
-      element = document.createElement("div")
-      element.appendChild startContent
-      newlineIndex = text.indexOf("\n")
-      textContent = text.substring(0, newlineIndex)
-      element.appendChild document.createTextNode(textContent)  if textContent
-      text = text.substring(newlineIndex + 1)
-      element.normalize()
-      element.appendChild document.createElement("br")  unless element.firstChild
-      container.insertBefore element, anchorLine
-      buffer = []
+    flattenChildren = (node) ->
       i = 0
+      return if !node
+      length = node.childNodes.length
 
-      while i < text.length
-        c = text[i]
-        if c is "\n"
-          element = document.createElement("div")
-          line = buffer.join("")
-          buffer = []
-          if line
-            element.appendChild document.createTextNode(line)
-          else
-            element.appendChild document.createElement("br")
-          container.insertBefore element, anchorLine
-        else
-          buffer.push c
+      return node if length is 0
+
+      while i < length
+        if node.childNodes[i] and node.childNodes[i].nodeType is 1 and node.childNodes[i].classList and node.childNodes[i].classList.contains("node")
+          if node.childNodes[i].parentNode.id isnt $el.attr('id')
+            $(node.childNodes[i].parentNode).after node.childNodes[i]
+
+          flattenChildren(node.childNodes[i])
         i++
-      element = document.createElement("div")
-      line = buffer.join("")
-      element.appendChild document.createTextNode(line)  if line
-      element.appendChild endContent
-      element.normalize()
-      element.appendChild document.createElement("br")  unless element.firstChild
-      container.insertBefore element, anchorLine
-      document.execCommand "selectall", false, null
 
-      # Delete selection.
-      document.execCommand "delete", false, null
+    flattenChildren($el[0])
 
-      # Delete starting div.
-      document.execCommand "delete", false, null
-      insertHtml container.innerHTML
-      document.body.scrollTop = origScrollTop
-      finalIndex = pivotIndex + pastedLength
-      selectRange finalIndex, finalIndex
-    currentLine = getLine(window.getSelection().anchorNode)
-    console.log(currentLine)
-    scrollTop = origScrollTop
-    scrollBottom = scrollTop + window.innerHeight
-    lineTop = currentLine.offsetTop
-    lineBottom = lineTop + currentLine.offsetHeight
-    if lineTop < scrollTop
-      document.body.scrollTop = lineTop
-    else document.body.scrollTop = lineBottom - window.innerHeight  if lineBottom > scrollBottom
+    queueContentChange()
+
   # toggleTask: toggleTask,
   # toggleTaskDone: toggleTaskDone,
   # getNoteData: function () {
