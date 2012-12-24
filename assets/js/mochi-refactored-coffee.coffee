@@ -292,7 +292,7 @@ window.MochiEditor = (noteId, username) ->
         tempEl = "<span id='getPos'>#{lastChar}</span>"
       else
         replaceChar = text[characterOffset - 1]
-        newText = if characterOffset is 1 then "" else text.replaceCharacter characterOffset - 1, ""
+        newText = if characterOffset is 1 then "" else text.slice 0, characterOffset - 1
         tempEl = "<span id='getPos'>#{replaceChar || ''}</span>"
 
       lastNode.textContent = newText
@@ -569,9 +569,7 @@ window.MochiEditor = (noteId, username) ->
   #         tasks: getTasks(),
   #         selection: getSelRange()
   #     };
-  # }
-
-
+  #
 
   #### Initial Setup ####
   setEditable true
