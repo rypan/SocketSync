@@ -19,7 +19,7 @@ window.MochiEditor = (noteId, username) ->
   $titleHint = $("#title-hint")
   $noteEl = $("#note")
   $cursor = $("<span id='cursor'><span class='name'></span></span>")
-  syncTimeout = undefined
+  syncTimeouts = []
   noteChangeTimeoutId = undefined
   addingRemoteChanges = false
   linesArray = {}
@@ -50,8 +50,8 @@ window.MochiEditor = (noteId, username) ->
   $el.on "focus.bindDOMSubtreeModified", ->
     $el.off ".bindDOMSubtreeModified"
     $el.on "DOMSubtreeModified", (event) ->
-      syncTimeout = setTimeout(->
-        clearTimeout syncTimeout
+      syncTimeouts.push setTimeout(->
+        clearTimeout(i) for i in syncTimeouts
         self.cursorCharacterOffset = getCaretCharacterOffsetWithin(event.target)
         handleContentChange() unless addingRemoteChanges
         self.cursorCharacterOffset = undefined
@@ -164,6 +164,14 @@ window.MochiEditor = (noteId, username) ->
     $("#editor div").filter ->
       `$(this).data("timestamp") == timestamp`
 
+  lineForUnderneathTimestamps = (underneathTimestamps) ->
+    $line = []
+
+    while $line.length is 0 and underneathTimestamps.length > 0
+      $line = lineForTimestamp(underneathTimestamps.shift())
+
+    $line
+
   setEditable = (editable) ->
     if editable
       $el.attr "contenteditable", "true"
@@ -224,7 +232,7 @@ window.MochiEditor = (noteId, username) ->
       else
         replaceChar = text[characterOffset - 1]
         newText = if characterOffset is 1 then "" else text.replaceCharacter characterOffset - 1, ""
-        tempEl = "<span id='getPos'>#{replaceChar}</span>"
+        tempEl = "<span id='getPos'>#{replaceChar || ''}</span>"
 
       lastNode.textContent = newText
       $line.append(tempEl)
@@ -258,13 +266,24 @@ window.MochiEditor = (noteId, username) ->
     # handleNoteChange();
     updateTitleHint()
 
+  buildUnderneathTimestamps = ($line) ->
+    i = 0
+    returnArray = []
+
+    while $line.length > 0 and i < 3
+      returnArray.push $line.prev().data("timestamp")
+      $line = $line.prev()
+      i++
+
+    returnArray
+
   syncLine = ($line) ->
     return  if linesArray[$line.data("timestamp")] is $line.html()
     timestamp = $line.data("timestamp")
     linesArray[timestamp] = $line.html()
     socket.emit "note.syncLine",
       timestamp: timestamp
-      underneath_timestamp: $line.prev().data("timestamp")
+      underneath_timestamps: buildUnderneathTimestamps($line)
       text: linesArray[timestamp]
       characterOffset: self.cursorCharacterOffset
 
@@ -276,10 +295,10 @@ window.MochiEditor = (noteId, username) ->
       timestamp: timestamp
 
 
-  cleanupSync = ->
+  self.cleanupSync = ->
     for timestamp, line of linesArray
       if lineForTimestamp(timestamp).length is 0
-        return removeLine(timestamp)
+        removeLine(timestamp)
 
   handleContentChange = ->
     $line = $el.children(":first")
@@ -290,7 +309,7 @@ window.MochiEditor = (noteId, username) ->
         $line.removeClass "task"
       syncLine $line
       $line = $line.next()
-    cleanupSync()
+    self.cleanupSync()
 
 
   # handleNoteChange();
@@ -356,6 +375,7 @@ window.MochiEditor = (noteId, username) ->
       if $(@).find(".checkbox").length > 0
         toggleCheckbox($(@).find(".checkbox"))
 
+    # @todo abide by the rules of the timeout!
     handleContentChange()
 
   toggleCheckbox = ($checkbox) ->
@@ -926,10 +946,12 @@ window.MochiEditor = (noteId, username) ->
       $newLine = $("<div class='node' data-timestamp='" + data.timestamp + "'>" + data.text + "</div>")
 
         # @possible ==
-      if !data.underneath_timestamp? or lineForTimestamp(data.underneath_timestamp).length is 0
+      $underneathLine = lineForUnderneathTimestamps(data.underneath_timestamps)
+
+      if !data.underneath_timestamps? or $underneathLine.length is 0
         $("#editor").prepend $newLine
       else
-        lineForTimestamp(data.underneath_timestamp).after $newLine
+        $underneathLine.after $newLine
 
       setOtherUsersCursorOnLine($newLine, data.characterOffset, username)
 
