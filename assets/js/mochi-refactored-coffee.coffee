@@ -325,8 +325,8 @@ window.MochiEditor = (noteId, username) ->
   # @checkup remove task stuff for now
   #
 
-  addCheckbox = ($line, addToBegginingOfLine) ->
-    checkbox = "<img class='checkbox' src='' width='0' height='0' />"
+  addCheckbox = ($line, addToBegginingOfLine, showAnimation = true) ->
+    checkbox = "<img class='checkbox #{if showAnimation then 'checkbox-animated'}' src='' width='0' height='0' />"
 
     if addToBegginingOfLine
       $line.prepend(checkbox + " ")
@@ -348,7 +348,7 @@ window.MochiEditor = (noteId, username) ->
           $(@)[0].childNodes[0].textContent = $(@)[0].childNodes[0].textContent.substring(1)
 
       else
-        addCheckbox($(@), true)
+        addCheckbox($(@), true, false)
 
   self.toggleTaskDone = ->
     lines = getSelectedLines()
