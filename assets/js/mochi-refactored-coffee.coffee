@@ -1,3 +1,10 @@
+`String.prototype.replaceCharacter = function (index, string) {
+  if (index > 1)
+    return this.substring(0, index) + string + this.substring(index + 1, this.length);
+  else
+    return string + this;
+};`
+
 HostApp =
   noteChanged: ->
 
@@ -189,8 +196,70 @@ window.MochiEditor = (noteId, username) ->
   #     }, 70);
   # }
 
+  nodeListToArray = (nodeList) ->
+    returnArray = []
+    length = nodeList.length
+    i = 0
+
+    while i < length
+      returnArray.push nodeList.item(i)
+      i++
+
+    returnArray
+
+  offsetOfFirstDifferentCharacter = (textNode1, textNode2) ->
+    text1 = textNode1.textContent
+    text2 = textNode2.textContent
+    for index, char of text2
+      if char isnt text1[index]
+        newText = textNode2.textContent
+        return newText.replaceCharacter(index, "<span id='getPos'>#{char}</span>")
+
+    return false
+
+  findOffsetOfFirstDifferentNode = (oldChildren, newChildren) ->
+
+    foundOffset = undefined
+
+    for index, node of newChildren
+      return if foundOffset
+
+      if oldChildren[index].nodeType isnt node.nodeType
+        $foundItem = $(node)
+        foundOffset =
+          top: $foundItem.offset().top
+          right: $foundItem.offset().left + $foundItem.width()
+
+      else if node.nodeType is 3 #textNode
+        oldNodeText = node.textContent
+        if (newNodeText = offsetOfFirstDifferentCharacter(oldChildren[index], node))
+          console.log newNodeText
+          $newNode = $("<div>#{newNodeText}</div>")
+          console.log $newNode.html()
+          $(node).replaceWith($newNode)
+          console.log $newNode.html()
+          foundOffset =
+            right: $("#getPos").offset().left + $("#getPos").width()
+            top: $("#getPos").offset().top
+          $newNode.replaceWith(oldNodeText)
+
+    return false if !foundOffset
+
+    return {
+      top: foundOffset.top
+      right: foundOffset.right
+    }
+
+  setOtherUsersCursorAtLocation = (top, right, username) ->
+    $cursor.css
+      left: right
+      top: top
+
+    .find(".name").text(username)
+
+    $cursor.show()
+
   setOtherUsersCursorOnLine = ($line, username) ->
-    console.log($line, username)
     lastNode = $line[0].childNodes.item($line[0].childNodes.length - 1) || $line[0]
 
     if lastNode.nodeType is 3 # last child is a text node, wrap it in a span
@@ -215,13 +284,7 @@ window.MochiEditor = (noteId, username) ->
       offsetRight = $(lastNode).offset().left + $(lastNode).width()
       offsetTop = $(lastNode).offset().top
 
-    $cursor.css
-      left: offsetRight
-      top: offsetTop
-
-    .find(".name").text(username)
-
-    $cursor.show()
+    setOtherUsersCursorAtLocation(offsetTop, offsetRight, username)
 
   updateTitleHint = ->
     if $titleEl.val()
@@ -879,9 +942,16 @@ window.MochiEditor = (noteId, username) ->
 
     if $existingLine.length > 0
       # update line
+      originalChildren = nodeListToArray $existingLine[0].cloneNode(true).childNodes
       $existingLine.html data.text
+      newChildren = nodeListToArray $existingLine[0].childNodes
 
-      setOtherUsersCursorOnLine($existingLine, username)
+      offset = findOffsetOfFirstDifferentNode(originalChildren, newChildren)
+
+      if offset
+        setOtherUsersCursorAtLocation(offset.top, offset.right, username)
+      else
+        setOtherUsersCursorOnLine($existingLine, username)
 
     else
       # create line
