@@ -438,6 +438,7 @@ window.MochiEditor = (noteId, username) ->
 
   toggleCheckbox = ($checkbox) ->
     $checkbox.toggleClass("checkbox-checked")
+    queueContentChange()
 
 
   # checkup new preservingSelection function
