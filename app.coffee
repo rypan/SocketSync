@@ -77,6 +77,7 @@ io.sockets.on 'connection', (socket) ->
       @note = note
 
   socket.on 'note.syncLine', (data) =>
+    console.log data
     @note.syncLine data, (params) =>
       socket.broadcast.to(@note.id).emit 'note.lineSynced', params, socket.username
 

@@ -1,9 +1,10 @@
 `String.prototype.replaceCharacter = function (index, string) {
-  if (index > 1)
+  if (index > 0)
     return this.substring(0, index) + string + this.substring(index + 1, this.length);
   else
     return string + this;
-};`
+};
+`
 
 HostApp =
   noteChanged: ->
@@ -49,7 +50,9 @@ window.MochiEditor = (noteId, username) ->
   $el.on "DOMSubtreeModified", (event) ->
     syncTimeout = setTimeout(->
       clearTimeout syncTimeout
+      self.cursorCharacterOffset = getCaretCharacterOffsetWithin(event.target)
       handleContentChange() unless addingRemoteChanges
+      self.cursorCharacterOffset = undefined
     , 500)
 
   $el.on "paste", (event) ->
@@ -165,6 +168,22 @@ window.MochiEditor = (noteId, username) ->
   #     );
   #     return [start, end];
   # }
+  getCaretCharacterOffsetWithin = (element) ->
+    caretOffset = 0
+    unless typeof window.getSelection is "undefined" or !window.getSelection().anchorNode
+      range = window.getSelection().getRangeAt(0)
+      preCaretRange = range.cloneRange()
+      preCaretRange.selectNodeContents element
+      preCaretRange.setEnd range.endContainer, range.endOffset
+      caretOffset = preCaretRange.toString().length
+    else if typeof document.selection isnt "undefined" and document.selection.type isnt "Control"
+      textRange = document.selection.createRange()
+      preCaretTextRange = document.body.createTextRange()
+      preCaretTextRange.moveToElementText element
+      preCaretTextRange.setEndPoint "EndToEnd", textRange
+      caretOffset = preCaretTextRange.text.length
+    caretOffset
+
   lineForTimestamp = (timestamp) ->
     $("#editor div").filter ->
       `$(this).data("timestamp") == timestamp`
@@ -207,49 +226,6 @@ window.MochiEditor = (noteId, username) ->
 
     returnArray
 
-  offsetOfFirstDifferentCharacter = (textNode1, textNode2) ->
-    text1 = textNode1.textContent
-    text2 = textNode2.textContent
-    for index, char of text2
-      if char isnt text1[index]
-        newText = textNode2.textContent
-        return newText.replaceCharacter(index, "<span id='getPos'>#{char}</span>")
-
-    return false
-
-  findOffsetOfFirstDifferentNode = (oldChildren, newChildren) ->
-
-    foundOffset = undefined
-
-    for index, node of newChildren
-      return if foundOffset
-
-      if oldChildren[index].nodeType isnt node.nodeType
-        $foundItem = $(node)
-        foundOffset =
-          top: $foundItem.offset().top
-          right: $foundItem.offset().left + $foundItem.width()
-
-      else if node.nodeType is 3 #textNode
-        oldNodeText = node.textContent
-        if (newNodeText = offsetOfFirstDifferentCharacter(oldChildren[index], node))
-          console.log newNodeText
-          $newNode = $("<div>#{newNodeText}</div>")
-          console.log $newNode.html()
-          $(node).replaceWith($newNode)
-          console.log $newNode.html()
-          foundOffset =
-            right: $("#getPos").offset().left + $("#getPos").width()
-            top: $("#getPos").offset().top
-          $newNode.replaceWith(oldNodeText)
-
-    return false if !foundOffset
-
-    return {
-      top: foundOffset.top
-      right: foundOffset.right
-    }
-
   setOtherUsersCursorAtLocation = (top, right, username) ->
     $cursor.css
       left: right
@@ -259,13 +235,19 @@ window.MochiEditor = (noteId, username) ->
 
     $cursor.show()
 
-  setOtherUsersCursorOnLine = ($line, username) ->
+  setOtherUsersCursorOnLine = ($line, characterOffset, username) ->
     lastNode = $line[0].childNodes.item($line[0].childNodes.length - 1) || $line[0]
 
     if lastNode.nodeType is 3 # last child is a text node, wrap it in a span
       text = $line.html()
-      lastChar = text.substr(-1)
-      newText = text.slice(0, -1) + "<span id='getPos'>#{lastChar}</span>"
+
+      if characterOffset is 0
+        lastChar = text.substr(-1)
+        newText = text.slice(0, -1) + "<span id='getPos'>#{lastChar}</span>"
+      else
+        replaceChar = text[characterOffset - 1]
+        newText = text.replaceCharacter characterOffset - 1, "<span id='getPos'>#{replaceChar}</span>"
+
       $line.html(newText)
       offsetRight = $("#getPos").offset().left + $("#getPos").width()
       offsetTop = $("#getPos").offset().top
@@ -304,6 +286,7 @@ window.MochiEditor = (noteId, username) ->
       timestamp: timestamp
       underneath_timestamp: $line.prev().data("timestamp")
       text: linesArray[timestamp]
+      characterOffset: self.cursorCharacterOffset
 
 
   removeLine = (timestamp) ->
@@ -942,16 +925,8 @@ window.MochiEditor = (noteId, username) ->
 
     if $existingLine.length > 0
       # update line
-      originalChildren = nodeListToArray $existingLine[0].cloneNode(true).childNodes
       $existingLine.html data.text
-      newChildren = nodeListToArray $existingLine[0].childNodes
-
-      offset = findOffsetOfFirstDifferentNode(originalChildren, newChildren)
-
-      if offset
-        setOtherUsersCursorAtLocation(offset.top, offset.right, username)
-      else
-        setOtherUsersCursorOnLine($existingLine, username)
+      setOtherUsersCursorOnLine($existingLine, data.characterOffset, username)
 
     else
       # create line
@@ -963,7 +938,7 @@ window.MochiEditor = (noteId, username) ->
       else
         lineForTimestamp(data.underneath_timestamp).after $newLine
 
-      setOtherUsersCursorOnLine($newLine, username)
+      setOtherUsersCursorOnLine($newLine, data.characterOffset, username)
 
     linesArray[data.timestamp] = data.text
     addingRemoteChanges = false
