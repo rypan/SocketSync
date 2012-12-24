@@ -1,3 +1,3 @@
 ##### todo:
 
-- paste/cut/etc
+- properly determine difference in html elements
