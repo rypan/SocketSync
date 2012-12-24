@@ -65,82 +65,57 @@ window.MochiEditor = (noteId, username) ->
     $(event.target).removeClass "checkbox-animated"
 
 
-  # @checkup
-  # $el.on('keydown', function (event) {
-  #     var keyCode = event.keyCode;
+  $el.on "keydown", (event) ->
+    keyCode = event.keyCode
+    if keyCode is 32 # space
+      #insert checkbox conditionally
+      sel = window.getSelection()
+      line = getSelectedLines()[0]
+      if line.childNodes[0].textContent.match(/^\s*\+$/)
+        console.log line.childNodes[0].textContent.slice(0, -2)
+        line.childNodes[0].textContent = line.childNodes[0].textContent.slice(0, -2)
+        addCheckbox($(line))
+        sel.modify "move", "forward", "line"
+        event.preventDefault()
 
-  #     if (keyCode === 32) { // space
-  #         var sel = window.getSelection();
-  #         var line = getLine(sel.anchorNode);
-  #         var firstNode = line.firstChild;
-  #         if (firstNode.nodeType === Node.TEXT_NODE) {
-  #             if (sel.anchorNode === firstNode) {
-  #                 var match = firstNode.textContent.match(/^\s*\+$/);
-  #                 if (match) {
-  #                     sel.modify('extend', 'backward', 'character');
+    else if keyCode is 8 # delete
+      # Prevent deletion of last div.
+      event.preventDefault() if $el[0].childNodes.length is 1 and $el[0].firstChild.childNodes.length is 1 and $el[0].firstChild.firstChild.tagName is "BR"
 
-  #                     // Preserve height to avoid page jump when inserting
-  #                     // checkbox at the end of a long, scrolled note.
-  #                     line.style.height = line.offsetHeight + 'px';
-  #                     insertCheckbox('', true);
+    # else if event.metaKey
+    #   if keyCode is 13 # return
+    #     lines = []
+    #     outlineChildNodes editorEl, lines, ""
+    #     console.log "OUTLINE:\n" + lines.join("\n")
+    #     event.preventDefault()
+    #     return
 
-  #                     // Remove fixed height.
-  #                     line.setAttribute('style', '');
-  #                 }
-  #             }
-  #         }
-  #     } else if (keyCode === 8) { // delete
-  #         // Prevent deletion of last div.
-  #         if (editorEl.childNodes.length === 1 &&
-  #             editorEl.firstChild.childNodes.length === 1 &&
-  #             editorEl.firstChild.firstChild.tagName === 'BR') {
-  #             event.preventDefault();
-  #         }
-  #     } else if (event.metaKey) {
-  #         if (keyCode === 13) { // return
-  #             var lines = [];
-  #             outlineChildNodes(editorEl, lines, '');
-  #             console.log('OUTLINE:\n' + lines.join('\n'));
+    # else
+    #   if keyCode is 38 # up
+    #     selection = window.getSelection()
+    #     line = getLine(selection.anchorNode)
+    #     unless line.previousSibling
+    #       startTop = line.offsetTop + 1
+    #       origRange = selection.getRangeAt(0)
+    #       currentRects = origRange.getClientRects()
+    #       currentTop = undefined
+    #       if currentRects.length
+    #         currentTop = currentRects[0].top
+    #       else
+    #         currentTop = startTop
+    #       editor.focusTitle()  if currentTop <= startTop
+    #   else if keyCode is 9 # tab
+    #     event.preventDefault()
+    #     insertHtml "\t"
+    #   else if keyCode is 13 # return
+    #     sel = window.getSelection()
+    #     indent = getIndentString(getLine(sel.anchorNode))
+    #     if indent
+    #       setTimeout (->
+    #         insertHtml indent
+    #       ), 0
+    # handleSelectionChange()
 
-  #             event.preventDefault();
-  #             return;
-  #         }
-  #     } else {
-  #         if (keyCode === 38) { // up
-  #             var selection = window.getSelection();
-  #             var line = getLine(selection.anchorNode);
-  #             if (!line.previousSibling) {
-  #                 var startTop = line.offsetTop + 1;
-
-  #                 var origRange = selection.getRangeAt(0);
-  #                 var currentRects = origRange.getClientRects();
-  #                 var currentTop;
-  #                 if (currentRects.length) {
-  #                     currentTop = currentRects[0].top;
-  #                 } else {
-  #                     currentTop = startTop;
-  #                 }
-
-  #                 if (currentTop <= startTop) {
-  #                     editor.focusTitle();
-  #                 }
-  #             }
-  #         } else if (keyCode === 9) { // tab
-  #             event.preventDefault();
-  #             insertHtml('\t');
-  #         } else if (keyCode === 13) { // return
-  #             var sel = window.getSelection();
-  #             var indent = getIndentString(getLine(sel.anchorNode));
-  #             if (indent) {
-  #                 setTimeout(function () {
-  #                     insertHtml(indent);
-  #                 }, 0);
-  #             }
-  #         }
-  #     }
-
-  #     handleSelectionChange();
-  # });
   # $el.on "mouseup", (event) ->
   #   # @checkup change $el
   #   $el = $(event.target)
@@ -339,15 +314,6 @@ window.MochiEditor = (noteId, username) ->
   #     return '';
   # }
 
-  # function insertCheckbox(suffix, animated) {
-  #     suffix = suffix || '';
-  #     if (animated) {
-  #         animated = ' checkbox-animated';
-  #     } else {
-  #         animated = '';
-  #     }
-  #     insertHtml('<img class="checkbox' + animated + '" src="" width="0" height="0">' + suffix);
-  # }
 
   # function toggleCheckbox(checkbox) {
   #     checkbox.classList.toggle('checkbox-checked');
@@ -359,45 +325,75 @@ window.MochiEditor = (noteId, username) ->
 
   # @checkup remove task stuff for now
   #
-  # function toggleTask() {
-  #     var lines = getSelectedLines();
-  #     preservingSelection(function () {
-  #         var changes = [];
-  #         lines.forEach(function (line) {
-  #             var lineIndex = indexFromNodeAndOffset(editorEl, line, 0);
-  #             var afterIndentIndex = lineIndex + getIndentString(line).length;
-  #             var isTask = line.classList.contains('task');
-  #             if (isTask) {
-  #                 var checkbox = line.querySelector('.checkbox');
-  #                 var range = document.createRange();
-  #                 range.setStartBefore(checkbox);
 
-  #                 var checkboxIndex = indexFromNodeAndOffset(editorEl, range.startContainer, range.startOffset);
+  addCheckbox = ($line, addToBegginingOfLine) ->
+    checkbox = "<img class='checkbox' src='' width='0' height='0' />"
 
-  #                 range.setStartAfter(checkbox);
-  #                 var sel = window.getSelection();
-  #                 sel.removeAllRanges();
-  #                 sel.addRange(range);
-  #                 sel.modify('extend', 'forward', 'character');
-  #                 var isSpace = (sel.toString() === ' ');
+    if addToBegginingOfLine
+      $line.prepend(checkbox + " ")
+    else
+      $line.append(checkbox + " ")
 
-  #                 if (isSpace) {
-  #                     selectRange(checkboxIndex, checkboxIndex + 2);
-  #                     changes.push([checkboxIndex, -2]);
-  #                 } else {
-  #                     selectRange(checkboxIndex, checkboxIndex + 1);
-  #                     changes.push([checkboxIndex, -1]);
-  #                 }
-  #                 document.execCommand('delete', false, null);
-  #             } else {
-  #                 selectRange(afterIndentIndex, afterIndentIndex);
-  #                 insertCheckbox(' ');
-  #                 changes.push([afterIndentIndex, 2]);
-  #             }
-  #         });
-  #         return changes;
-  #     });
-  # }
+
+  self.toggleTask = ->
+    lines = getSelectedLines()
+
+    $(lines).each ->
+
+      if $(@).find(".checkbox").length > 0
+        # remove the checkbox
+        $(@).find(".checkbox").remove()
+
+        # if there's still a blank space at the beginning of the line, remove that too.
+        if $(@)[0].childNodes[0].nodeType is 3 and $(@)[0].childNodes[0].textContent[0] is " "
+          $(@)[0].childNodes[0].textContent = $(@)[0].childNodes[0].textContent.substring(1)
+
+      else
+        addCheckbox($(@), true)
+
+  self.toggleTaskDone = ->
+    lines = getSelectedLines()
+
+    $(lines).each ->
+      if $(@).find(".checkbox").length > 0
+        toggleCheckbox($(@).find(".checkbox"))
+
+    handleContentChange()
+
+  toggleCheckbox = ($checkbox) ->
+    $checkbox.toggleClass("checkbox-checked")
+
+
+    # preservingSelection ->
+    #   changes = []
+    #   lines.forEach (line) ->
+    #     lineIndex = indexFromNodeAndOffset(editorEl, line, 0)
+    #     afterIndentIndex = lineIndex + getIndentString(line).length
+    #     isTask = line.classList.contains("task")
+    #     if isTask
+    #       checkbox = line.querySelector(".checkbox")
+    #       range = document.createRange()
+    #       range.setStartBefore checkbox
+    #       checkboxIndex = indexFromNodeAndOffset(editorEl, range.startContainer, range.startOffset)
+    #       range.setStartAfter checkbox
+    #       sel = window.getSelection()
+    #       sel.removeAllRanges()
+    #       sel.addRange range
+    #       sel.modify "extend", "forward", "character"
+    #       isSpace = (sel.toString() is " ")
+    #       if isSpace
+    #         selectRange checkboxIndex, checkboxIndex + 2
+    #         changes.push [checkboxIndex, -2]
+    #       else
+    #         selectRange checkboxIndex, checkboxIndex + 1
+    #         changes.push [checkboxIndex, -1]
+    #       document.execCommand "delete", false, null
+    #     else
+    #       selectRange afterIndentIndex, afterIndentIndex
+    #       insertCheckbox " "
+    #       changes.push [afterIndentIndex, 2]
+
+    #   changes
 
   # function toggleTaskDone() {
   #     var lines = getSelectedLines();
@@ -664,46 +660,34 @@ window.MochiEditor = (noteId, username) ->
   #     sel.extend(focus[0], focus[1]);
   # }
 
-  # function getLine(node) {
-  #     while (node.parentNode !== $el) {
-  #         node = node.parentNode;
-  #     }
-  #     return node;
-  # }
+  getLine = (node) ->
+    node = node.parentNode while $(node.parentNode).attr('id') isnt "editor"
+    node
 
-  # function isBefore(a, aOffset, b, bOffset) {
-  #     var rangeA = document.createRange();
-  #     var rangeB = document.createRange();
+  isBefore = (a, aOffset, b, bOffset) ->
+    rangeA = document.createRange()
+    rangeB = document.createRange()
+    rangeA.setStart a, aOffset
+    rangeA.setEnd a, aOffset
+    rangeB.setStart b, bOffset
+    rangeB.setEnd b, bOffset
+    rangeA.compareBoundaryPoints(Range.START_TO_START, rangeB) is -1
 
-  #     rangeA.setStart(a, aOffset);
-  #     rangeA.setEnd(a, aOffset);
-  #     rangeB.setStart(b, bOffset);
-  #     rangeB.setEnd(b, bOffset);
-
-  #     return rangeA.compareBoundaryPoints(Range.START_TO_START, rangeB) === -1;
-  # }
-
-  # function getSelectedLines() {
-  #     var sel = window.getSelection();
-  #     var first = getLine(sel.anchorNode);
-  #     var last = getLine(sel.focusNode);
-  #     if (isBefore(last, 0, first, 0)) {
-  #         var temp = first;
-  #         first = last;
-  #         last = temp;
-  #     }
-  #     var node = first;
-  #     var divs = [];
-  #     while (node) {
-  #         divs.push(node);
-  #         if (node == last) {
-  #             break;
-  #         }
-  #         node = node.nextSibling;
-  #     }
-
-  #     return divs;
-  # }
+  getSelectedLines = ->
+    sel = window.getSelection()
+    first = getLine(sel.anchorNode)
+    last = getLine(sel.focusNode)
+    if isBefore(last, 0, first, 0)
+      temp = first
+      first = last
+      last = temp
+    node = first
+    divs = []
+    while node
+      divs.push node
+      break  if node is last
+      node = node.nextSibling
+    divs
 
   # function flattenNode(node) {
   #     var it = document.createNodeIterator(
@@ -960,3 +944,5 @@ window.MochiEditor = (noteId, username) ->
     delete linesArray[data.timestamp]
 
     addingRemoteChanges = false
+
+  self
