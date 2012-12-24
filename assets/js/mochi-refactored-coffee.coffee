@@ -321,7 +321,14 @@ window.MochiEditor = (noteId, username) ->
     checkbox = "<img class='checkbox #{if showAnimation then 'checkbox-animated'}' src='' width='0' height='0' />"
 
     if addToBegginingOfLine
-      $line.prepend(checkbox + " ")
+      # if line begins with whitespace, add after that whitespace
+      if $line[0].childNodes[0].nodeType is 3 and whitespace = $line[0].childNodes[0].textContent.match(/^\s+/)
+        $line[0].childNodes[0].textContent = $line[0].childNodes[0].textContent.replace(/^\s+/, "")
+        $($line[0].childNodes[0]).before(whitespace)
+        $($line[0].childNodes[0]).after(checkbox + " ")
+      else
+        # add at beginning
+        $line.prepend(checkbox + " ")
     else
       $($line[0].childNodes[0]).after(checkbox + " ")
 
