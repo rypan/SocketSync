@@ -215,19 +215,23 @@ window.MochiEditor = (noteId, username) ->
     lastNode = $line[0].childNodes.item($line[0].childNodes.length - 1) || $line[0]
 
     if lastNode.nodeType is 3 # last child is a text node, wrap it in a span
-      text = $line.html()
+      text = lastNode.textContent
 
       if characterOffset is 0
         lastChar = text.substr(-1)
-        newText = text.slice(0, -1) + "<span id='getPos'>#{lastChar}</span>"
+        newText = text.slice(0, -1)
+        tempEl = "<span id='getPos'>#{lastChar}</span>"
       else
         replaceChar = text[characterOffset - 1]
-        newText = text.replaceCharacter characterOffset - 1, "<span id='getPos'>#{replaceChar}</span>"
+        newText = if characterOffset is 1 then "" else text.replaceCharacter characterOffset - 1, ""
+        tempEl = "<span id='getPos'>#{replaceChar}</span>"
 
-      $line.html(newText)
+      lastNode.textContent = newText
+      $line.append(tempEl)
       offsetRight = $("#getPos").offset().left + $("#getPos").width()
       offsetTop = $("#getPos").offset().top
-      $line.html(text)
+      $line.find("#getPos").remove()
+      lastNode.textContent = text
 
     else if lastNode.nodeName is "BR"
       $br = $line.children(":last")
@@ -312,18 +316,6 @@ window.MochiEditor = (noteId, username) ->
 
   #     return '';
   # }
-
-
-  # function toggleCheckbox(checkbox) {
-  #     checkbox.classList.toggle('checkbox-checked');
-
-  #     // Toggling class does not trigger DOMSubtreeModified event, so
-  #     // we have to call handleContentChange() manually.
-  #     handleContentChange();
-  # }
-
-  # @checkup remove task stuff for now
-  #
 
   addCheckbox = ($line, addToBegginingOfLine, showAnimation = true) ->
     checkbox = "<img class='checkbox #{if showAnimation then 'checkbox-animated'}' src='' width='0' height='0' />"
