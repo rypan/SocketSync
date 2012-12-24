@@ -74,7 +74,7 @@ window.MochiEditor = (noteId, username) ->
       if line.childNodes[0].textContent.match(/^\s*\+$/)
         line.childNodes[0].textContent = line.childNodes[0].textContent.replace(/\+\s*$/, '')
         addCheckbox($(line))
-        sel.modify "move", "forward", "line"
+        sel.modify "move", "forward", "lineboundary"
         event.preventDefault()
 
     else if keyCode is 8 # delete
