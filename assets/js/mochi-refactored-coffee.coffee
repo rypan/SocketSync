@@ -6,6 +6,74 @@
 };
 `
 
+saveSelection = ->
+  if window.getSelection
+    sel = window.getSelection()
+    return sel.getRangeAt(0)  if sel.getRangeAt and sel.rangeCount
+  else return document.selection.createRange()  if document.selection and document.selection.createRange
+  null
+
+restoreSelection = (range) ->
+  if range
+    if window.getSelection
+      sel = window.getSelection()
+      sel.removeAllRanges()
+      sel.addRange range
+    else range.select()  if document.selection and range.select
+
+getPasteData = (ev, cb) ->
+
+  initialSelection = saveSelection()
+
+  $elem = $("<div id='tempPaste' contenteditable='true'>Paste</div>")
+  $("body").append($elem)
+  $elem.focus()
+  el = $elem[0]
+
+
+  handlepaste = (elem, e) ->
+    savedcontent = elem.innerHTML
+    if e and e.clipboardData and e.clipboardData.getData # Webkit - get data from clipboard, put into editdiv, cleanup, then cancel event
+      if /text\/html/.test(e.clipboardData.types)
+        elem.innerHTML = e.clipboardData.getData("text/html")
+      else if /text\/plain/.test(e.clipboardData.types)
+        elem.innerHTML = e.clipboardData.getData("text/plain")
+      else
+        elem.innerHTML = ""
+      waitforpastedata elem, savedcontent
+    else # Everything else - empty editdiv and allow browser to paste content into it, then cleanup
+      elem.innerHTML = ""
+      waitforpastedata elem, savedcontent
+  waitforpastedata = (elem, savedcontent) ->
+    if elem.childNodes and elem.childNodes.length > 0
+      return processpaste elem, savedcontent
+    else
+      that =
+        e: elem
+        s: savedcontent
+
+      that.callself = ->
+        return waitforpastedata that.e, that.s
+
+      setTimeout ->
+        return that.callself()
+      , 20
+
+      return
+  processpaste = (elem, savedcontent) ->
+    pasteddata = elem.innerHTML
+
+    #^^Alternatively loop through dom (elem.childNodes or elem.getElementsByTagName) here
+    elem.innerHTML = savedcontent
+
+    # Do whatever with gathered data;
+    $elem.remove()
+    $("#editor").focus()
+    restoreSelection(initialSelection)
+    cb(pasteddata)
+
+  handlepaste(el, ev)
+
 HostApp =
   noteChanged: ->
   triggerPaste: ->
@@ -60,8 +128,12 @@ window.MochiEditor = (noteId, username) ->
       , 500)
 
   $el.on "paste", (event) ->
-    event.preventDefault()
-    HostApp.triggerPaste()
+    getPasteData event, (pastedData) ->
+      event.preventDefault()
+      self.pasteText(pastedData)
+
+
+    # HostApp.triggerPaste()
 
   $el.on "webkitAnimationEnd", (event) ->
     $(event.target).removeClass "checkbox-animated"
@@ -494,6 +566,7 @@ window.MochiEditor = (noteId, username) ->
   $(document).on "DOMNodeInserted", (e) ->
     return if addingRemoteChanges # @possible use '?'
     return if e.srcElement.nodeName isnt "DIV"
+    return if $(e.srcElement).attr('id') is "tempPaste"
     $(e.srcElement).removeAttr "data-timestamp"
     $(e.srcElement).data "timestamp", Date.now()
 
@@ -718,48 +791,6 @@ window.MochiEditor = (noteId, username) ->
       node = node.nextSibling
     divs
 
-  # function flattenNode(node) {
-  #     var it = document.createNodeIterator(
-  #         node, NodeFilter.SHOW_ALL, null
-  #     );
-  #     it.nextNode();
-  #     var nodes = [];
-  #     var inlineNodes = [];
-
-  #     function insertInlines() {
-  #         if (!inlineNodes.length) {
-  #             return;
-  #         }
-
-  #         var div = document.createElement('div');
-  #         inlineNodes.forEach(function (value) {
-  #             div.appendChild(value);
-  #         });
-  #         inlineNodes = [];
-  #         nodes.push(div);
-  #     }
-
-  #     var child = it.nextNode();
-  #     while (child) {
-  #         if (child.tagName === 'DIV') {
-  #             insertInlines();
-  #             nodes.push(child);
-  #         } else {
-  #             inlineNodes.push(child);
-  #         }
-
-  #         child = it.nextNode();
-  #     }
-
-  #     insertInlines();
-
-  #     nodes.reverse();
-  #     nodes.forEach(function (value) {
-  #         node.parentNode.insertBefore(value, node.nextSibling);
-  #     });
-  #     node.parentNode.removeChild(node);
-  # }
-
   # function getRange() {
   #     var sel = window.getSelection();
   #     return sel.getRangeAt(0);
@@ -811,118 +842,90 @@ window.MochiEditor = (noteId, username) ->
     $el.focus()
 
 
-  # self.pasteText = function (text) {
-  #     var origScrollTop = document.body.scrollTop;
+  self.pasteText = (text) ->
+    origScrollTop = document.body.scrollTop
+    if text.indexOf("\n") < 0
+      insertHtml text
+    else
 
-  #     if (text.indexOf('\n') < 0) {
-  #         insertHtml(text);
-  #     } else {
-  #         // Delete selection, if a non-empty selection exists.
-  #         var selRange = getSelRange();
-  #         if (selRange[0] !== selRange[1]) {
-  #             document.execCommand('delete', false, null);
-  #         }
+      # Delete selection, if a non-empty selection exists.
+      selRange = getSelRange()
+      document.execCommand "delete", false, null  if selRange[0] isnt selRange[1]
 
-  #         // Create container for making edits to nodes.
-  #         var container = document.createElement('div');
-  #         container.innerHTML = editorEl.innerHTML;
+      # Create container for making edits to nodes.
+      container = document.createElement("div")
+      container.innerHTML = editorEl.innerHTML
+      pivotIndex = selRange[0]
+      pivot = findNodeAndOffsetRelTo(container, pivotIndex)
+      pivotNode = pivot[0]
+      pivotOffset = pivot[1]
+      lineDiv = pivotNode
+      lineDiv = lineDiv.parentNode  while lineDiv isnt container and lineDiv.parentNode isnt container
+      range = document.createRange()
+      range.selectNodeContents lineDiv
+      range.setEnd pivotNode, pivotOffset
+      startContent = range.cloneContents()
+      range.selectNodeContents lineDiv
+      range.setStart pivotNode, pivotOffset
+      endContent = range.cloneContents()
 
-  #         var pivotIndex = selRange[0];
-  #         var pivot = findNodeAndOffsetRelTo(container, pivotIndex);
-  #         var pivotNode = pivot[0];
-  #         var pivotOffset = pivot[1];
+      # The line that new lines should be inserted before.
+      anchorLine = lineDiv.nextSibling
+      container.removeChild lineDiv
+      pastedLength = text.length
+      element = document.createElement("div")
+      element.appendChild startContent
+      newlineIndex = text.indexOf("\n")
+      textContent = text.substring(0, newlineIndex)
+      element.appendChild document.createTextNode(textContent)  if textContent
+      text = text.substring(newlineIndex + 1)
+      element.normalize()
+      element.appendChild document.createElement("br")  unless element.firstChild
+      container.insertBefore element, anchorLine
+      buffer = []
+      i = 0
 
-  #         var lineDiv = pivotNode;
-  #         while (lineDiv !== container && lineDiv.parentNode !== container) {
-  #             lineDiv = lineDiv.parentNode;
-  #         }
+      while i < text.length
+        c = text[i]
+        if c is "\n"
+          element = document.createElement("div")
+          line = buffer.join("")
+          buffer = []
+          if line
+            element.appendChild document.createTextNode(line)
+          else
+            element.appendChild document.createElement("br")
+          container.insertBefore element, anchorLine
+        else
+          buffer.push c
+        i++
+      element = document.createElement("div")
+      line = buffer.join("")
+      element.appendChild document.createTextNode(line)  if line
+      element.appendChild endContent
+      element.normalize()
+      element.appendChild document.createElement("br")  unless element.firstChild
+      container.insertBefore element, anchorLine
+      document.execCommand "selectall", false, null
 
-  #         var range = document.createRange();
-  #         range.selectNodeContents(lineDiv);
-  #         range.setEnd(pivotNode, pivotOffset);
-  #         var startContent = range.cloneContents();
+      # Delete selection.
+      document.execCommand "delete", false, null
 
-  #         range.selectNodeContents(lineDiv);
-  #         range.setStart(pivotNode, pivotOffset);
-  #         var endContent = range.cloneContents();
-
-  #         // The line that new lines should be inserted before.
-  #         var anchorLine = lineDiv.nextSibling;
-  #         container.removeChild(lineDiv);
-
-  #         var pastedLength = text.length;
-
-  #         var element = document.createElement('div');
-  #         element.appendChild(startContent);
-  #         var newlineIndex = text.indexOf('\n');
-  #         var textContent = text.substring(0, newlineIndex);
-  #         if (textContent) {
-  #             element.appendChild(document.createTextNode(textContent));
-  #         }
-  #         text = text.substring(newlineIndex + 1);
-  #         element.normalize();
-  #         if (!element.firstChild) {
-  #             element.appendChild(document.createElement('br'));
-  #         }
-  #         container.insertBefore(element, anchorLine);
-
-  #         var buffer = [];
-  #         for (var i = 0; i < text.length; i++) {
-  #             var c = text[i];
-  #             if (c === '\n') {
-  #                 var element = document.createElement('div');
-  #                 var line = buffer.join('');
-  #                 buffer = [];
-  #                 if (line) {
-  #                     element.appendChild(document.createTextNode(line));
-  #                 } else {
-  #                     element.appendChild(document.createElement('br'));
-  #                 }
-  #                 container.insertBefore(element, anchorLine);
-  #             } else {
-  #                 buffer.push(c);
-  #             }
-  #         }
-
-  #         var element = document.createElement('div');
-  #         var line = buffer.join('');
-  #         if (line) {
-  #             element.appendChild(document.createTextNode(line));
-  #         }
-  #         element.appendChild(endContent);
-  #         element.normalize();
-  #         if (!element.firstChild) {
-  #             element.appendChild(document.createElement('br'));
-  #         }
-  #         container.insertBefore(element, anchorLine);
-
-  #         document.execCommand('selectall', false, null);
-
-  #         // Delete selection.
-  #         document.execCommand('delete', false, null);
-
-  #         // Delete starting div.
-  #         document.execCommand('delete', false, null);
-
-  #         insertHtml(container.innerHTML);
-  #         document.body.scrollTop = origScrollTop;
-
-  #         var finalIndex = pivotIndex + pastedLength;
-  #         selectRange(finalIndex, finalIndex);
-  #     }
-
-  #     var currentLine = getLine(window.getSelection().anchorNode);
-  #     var scrollTop = origScrollTop;
-  #     var scrollBottom = scrollTop + window.innerHeight;
-  #     var lineTop = currentLine.offsetTop;
-  #     var lineBottom = lineTop + currentLine.offsetHeight;
-  #     if (lineTop < scrollTop) {
-  #         document.body.scrollTop = lineTop;
-  #     } else if (lineBottom > scrollBottom) {
-  #         document.body.scrollTop = lineBottom - window.innerHeight;
-  #     }
-  # },
-
+      # Delete starting div.
+      document.execCommand "delete", false, null
+      insertHtml container.innerHTML
+      document.body.scrollTop = origScrollTop
+      finalIndex = pivotIndex + pastedLength
+      selectRange finalIndex, finalIndex
+    currentLine = getLine(window.getSelection().anchorNode)
+    console.log(currentLine)
+    scrollTop = origScrollTop
+    scrollBottom = scrollTop + window.innerHeight
+    lineTop = currentLine.offsetTop
+    lineBottom = lineTop + currentLine.offsetHeight
+    if lineTop < scrollTop
+      document.body.scrollTop = lineTop
+    else document.body.scrollTop = lineBottom - window.innerHeight  if lineBottom > scrollBottom
   # toggleTask: toggleTask,
   # toggleTaskDone: toggleTaskDone,
   # getNoteData: function () {
