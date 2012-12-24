@@ -13,4 +13,4 @@ html
     #title-hint.text-hint Title
     | <div id="editor">!{note.content ? note.content : "<div class='node' data-timestamp='"+Date.now()+"'><br /></div>"}</div>
 
-  | <script> $(function(){ window.editor = new MochiEditor("#{note.id}", /*prompt('Enter a username.')*/"Adam"); }); </script>
+  | <script> $(function(){ window.editor = new MochiEditor("#{note.id}", /*prompt('Enter a username.')*/""+Math.floor(Math.random() * 100)); }); </script>

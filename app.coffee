@@ -77,7 +77,6 @@ io.sockets.on 'connection', (socket) ->
       @note = note
 
   socket.on 'syncUp', (syncQueue) =>
-    console.log syncQueue
 
     processSyncQueue = (syncQueue) =>
       return if syncQueue.length is 0

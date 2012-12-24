@@ -18,14 +18,12 @@ window.MochiEditor = (noteId, username) ->
   $titleEl = $("#title")
   $titleHint = $("#title-hint")
   $noteEl = $("#note")
-  $cursor = $("<span id='cursor'><span class='name'></span></span>")
   syncTimeouts = []
   noteChangeTimeoutId = undefined
   addingRemoteChanges = false
   linesArray = {}
   syncQueue = []
-
-  $noteEl.append($cursor)
+  cursors = {}
 
   $titleEl.on "focus", ->
     $titleHint.addClass "text-hint-focused"
@@ -51,7 +49,6 @@ window.MochiEditor = (noteId, username) ->
   $el.on "focus.bindDOMSubtreeModified", ->
     $el.off ".bindDOMSubtreeModified"
     $el.on "DOMSubtreeModified", (event) ->
-      console.log 'modified'
       syncTimeouts.push setTimeout(->
         clearTimeout(i) for i in syncTimeouts
         self.cursorCharacterOffset = getCaretCharacterOffsetWithin(event.target)
@@ -146,6 +143,12 @@ window.MochiEditor = (noteId, username) ->
   #     );
   #     return [start, end];
   # }
+
+  makeCursor = (username) ->
+    return if cursors[username]
+    cursors[username] = $("<span class='cursor'><span class='name'>#{username}</span></span>")
+    $noteEl.append(cursors[username])
+
   getCaretCharacterOffsetWithin = (element) ->
     caretOffset = 0
     unless typeof window.getSelection is "undefined" or !window.getSelection().anchorNode
@@ -213,13 +216,15 @@ window.MochiEditor = (noteId, username) ->
     returnArray
 
   setOtherUsersCursorAtLocation = (top, right, username) ->
-    $cursor.css
+    if !cursors[username] then makeCursor(username)
+
+    cursors[username].css
       left: right
       top: top
 
     .find(".name").text(username)
 
-    $cursor.show()
+    cursors[username].show()
 
   setOtherUsersCursorOnLine = ($line, characterOffset, username) ->
     lastNode = $line[0].childNodes.item($line[0].childNodes.length - 1) || $line[0]
