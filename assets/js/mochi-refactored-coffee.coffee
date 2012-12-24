@@ -72,8 +72,7 @@ window.MochiEditor = (noteId, username) ->
       sel = window.getSelection()
       line = getSelectedLines()[0]
       if line.childNodes[0].textContent.match(/^\s*\+$/)
-        console.log line.childNodes[0].textContent.slice(0, -2)
-        line.childNodes[0].textContent = line.childNodes[0].textContent.slice(0, -2)
+        line.childNodes[0].textContent = line.childNodes[0].textContent.replace(/\+\s*$/, '')
         addCheckbox($(line))
         sel.modify "move", "forward", "line"
         event.preventDefault()
@@ -90,30 +89,30 @@ window.MochiEditor = (noteId, username) ->
     #     event.preventDefault()
     #     return
 
-    # else
-    #   if keyCode is 38 # up
-    #     selection = window.getSelection()
-    #     line = getLine(selection.anchorNode)
-    #     unless line.previousSibling
-    #       startTop = line.offsetTop + 1
-    #       origRange = selection.getRangeAt(0)
-    #       currentRects = origRange.getClientRects()
-    #       currentTop = undefined
-    #       if currentRects.length
-    #         currentTop = currentRects[0].top
-    #       else
-    #         currentTop = startTop
-    #       editor.focusTitle()  if currentTop <= startTop
-    #   else if keyCode is 9 # tab
-    #     event.preventDefault()
-    #     insertHtml "\t"
-    #   else if keyCode is 13 # return
-    #     sel = window.getSelection()
-    #     indent = getIndentString(getLine(sel.anchorNode))
-    #     if indent
-    #       setTimeout (->
-    #         insertHtml indent
-    #       ), 0
+    else
+      if keyCode is 38 # up
+      #   selection = window.getSelection()
+      #   line = getLine(selection.anchorNode)
+      #   unless line.previousSibling
+      #     startTop = line.offsetTop + 1
+      #     origRange = selection.getRangeAt(0)
+      #     currentRects = origRange.getClientRects()
+      #     currentTop = undefined
+      #     if currentRects.length
+      #       currentTop = currentRects[0].top
+      #     else
+      #       currentTop = startTop
+      #     editor.focusTitle()  if currentTop <= startTop
+      else if keyCode is 9 # tab
+        event.preventDefault()
+        insertHtml "\t"
+      # else if keyCode is 13 # return
+      #   sel = window.getSelection()
+      #   indent = getIndentString(getLine(sel.anchorNode))
+      #   if indent
+      #     setTimeout (->
+      #       insertHtml indent
+      #     ), 0
     # handleSelectionChange()
 
   # $el.on "mouseup", (event) ->
@@ -332,7 +331,7 @@ window.MochiEditor = (noteId, username) ->
     if addToBegginingOfLine
       $line.prepend(checkbox + " ")
     else
-      $line.append(checkbox + " ")
+      $($line[0].childNodes[0]).after(checkbox + " ")
 
 
   self.toggleTask = ->
