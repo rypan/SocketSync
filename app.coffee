@@ -76,16 +76,28 @@ io.sockets.on 'connection', (socket) ->
     Note.findById socket.noteId, (err, note) =>
       @note = note
 
-  socket.on 'note.syncLine', (data) =>
-    # console.log data
-    @note.syncLine data, (params) =>
-      socket.broadcast.to(@note.id).emit 'note.lineSynced', params, socket.username
+  socket.on 'syncUp', (syncQueue) =>
+    console.log syncQueue
+
+    processSyncQueue = (syncQueue) =>
+      return if syncQueue.length is 0
+      item = syncQueue.shift()
+
+      @note[item[0]] item[1], (eventName, params) =>
+        socket.broadcast.to(@note.id).emit eventName, params, socket.username
+        processSyncQueue(syncQueue)
 
 
-  socket.on 'note.removeLine', (data) =>
-    console.log "removeLine", data
-    @note.removeLine data, (params) =>
-      socket.broadcast.to(@note.id).emit 'note.lineRemoved', params, socket.username
+    processSyncQueue(syncQueue)
+
+  # socket.on 'note.syncLine', (data) =>
+  #   # console.log data
+  #   @note.syncLine data,
+
+  # socket.on 'note.removeLine', (data) =>
+  #   console.log "removeLine", data
+  #   @note.removeLine data, (eventName, params) =>
+  #     socket.broadcast.to(@note.id).emit eventName, params, socket.username
 
 server.listen app.get('port'), ->
   console.log("Express server listening on port " + app.get('port')) unless process.env.SUBDOMAIN

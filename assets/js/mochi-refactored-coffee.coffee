@@ -23,6 +23,7 @@ window.MochiEditor = (noteId, username) ->
   noteChangeTimeoutId = undefined
   addingRemoteChanges = false
   linesArray = {}
+  syncQueue = []
 
   $noteEl.append($cursor)
 
@@ -50,6 +51,7 @@ window.MochiEditor = (noteId, username) ->
   $el.on "focus.bindDOMSubtreeModified", ->
     $el.off ".bindDOMSubtreeModified"
     $el.on "DOMSubtreeModified", (event) ->
+      console.log 'modified'
       syncTimeouts.push setTimeout(->
         clearTimeout(i) for i in syncTimeouts
         self.cursorCharacterOffset = getCaretCharacterOffsetWithin(event.target)
@@ -281,21 +283,19 @@ window.MochiEditor = (noteId, username) ->
     return  if linesArray[$line.data("timestamp")] is $line.html()
     timestamp = $line.data("timestamp")
     linesArray[timestamp] = $line.html()
-    socket.emit "note.syncLine",
+    syncQueue.push ["syncLine",
       timestamp: timestamp
       underneath_timestamps: buildUnderneathTimestamps($line)
       text: linesArray[timestamp]
       characterOffset: self.cursorCharacterOffset
+    ]
 
 
   removeLine = (timestamp) ->
     delete linesArray[timestamp]
+    syncQueue.push ["removeLine", {timestamp: timestamp}]
 
-    socket.emit "note.removeLine",
-      timestamp: timestamp
-
-
-  self.cleanupSync = ->
+  cleanupSync = ->
     for timestamp, line of linesArray
       if lineForTimestamp(timestamp).length is 0
         removeLine(timestamp)
@@ -309,8 +309,11 @@ window.MochiEditor = (noteId, username) ->
         $line.removeClass "task"
       syncLine $line
       $line = $line.next()
-    self.cleanupSync()
+    cleanupSync()
+    syncUp()
 
+  syncUp = ->
+    socket.emit "syncUp", syncQueue.splice(0)
 
   # handleNoteChange();
   handleSelectionChange = ->
