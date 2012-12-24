@@ -18,6 +18,18 @@ noteSchema.methods.syncLine = (data, cb) ->
 
   $ = cheerio.load(@content)
 
+  lineForTimestamp = (timestamp) ->
+    $("div[data-timestamp=#{timestamp}]")
+
+  lineForUnderneathTimestamps = (underneathTimestamps) ->
+    $line = []
+
+    while $line.length is 0 and underneathTimestamps.length > 0
+      $line = lineForTimestamp(underneathTimestamps.shift())
+
+    $line
+
+
   $existingLine = $("div[data-timestamp=#{data.timestamp}]")
 
   if $existingLine.length > 0 # update line
@@ -26,11 +38,14 @@ noteSchema.methods.syncLine = (data, cb) ->
   else # create line
     newLine = "<div class='node' data-timestamp='#{data.timestamp}'>#{data.text}</div>"
 
-    if data.underneath_timestamp is "" or $("div[data-timestamp=#{data.underneath_timestamp}]").length is 0
+    $underneath = lineForUnderneathTimestamps(data.underneath_timestamps.slice(0))
+
+    if data.underneath_timestamps is "" or $underneath.length is 0
       $.root().prepend(newLine)
 
     else
-      $("div[data-timestamp=#{data.underneath_timestamp}]").after(newLine)
+      console.log data.underneath_timestamps
+      $underneath.after(newLine)
 
   @content = $.html()
   @save ->

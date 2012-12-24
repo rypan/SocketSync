@@ -77,12 +77,13 @@ io.sockets.on 'connection', (socket) ->
       @note = note
 
   socket.on 'note.syncLine', (data) =>
-    console.log data
+    # console.log data
     @note.syncLine data, (params) =>
       socket.broadcast.to(@note.id).emit 'note.lineSynced', params, socket.username
 
 
   socket.on 'note.removeLine', (data) =>
+    console.log "removeLine", data
     @note.removeLine data, (params) =>
       socket.broadcast.to(@note.id).emit 'note.lineRemoved', params, socket.username
 
