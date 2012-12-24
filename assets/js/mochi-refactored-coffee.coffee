@@ -8,7 +8,6 @@
 
 HostApp =
   noteChanged: ->
-
   triggerPaste: ->
 
 window.MochiEditor = (noteId, username) ->
@@ -19,11 +18,12 @@ window.MochiEditor = (noteId, username) ->
   $titleEl = $("#title")
   $titleHint = $("#title-hint")
   $noteEl = $("#note")
+  $cursor = $("<span id='cursor'><span class='name'></span></span>")
   syncTimeout = undefined
   noteChangeTimeoutId = undefined
   addingRemoteChanges = false
   linesArray = {}
-  $cursor = $("<span id='cursor'><span class='name'></span></span>")
+
   $noteEl.append($cursor)
 
   $titleEl.on "focus", ->
@@ -47,13 +47,15 @@ window.MochiEditor = (noteId, username) ->
   $titleEl.on "paste", ->
     setTimeout handleTitleChange, 0
 
-  $el.on "DOMSubtreeModified", (event) ->
-    syncTimeout = setTimeout(->
-      clearTimeout syncTimeout
-      self.cursorCharacterOffset = getCaretCharacterOffsetWithin(event.target)
-      handleContentChange() unless addingRemoteChanges
-      self.cursorCharacterOffset = undefined
-    , 500)
+  $el.on "focus.bindDOMSubtreeModified", ->
+    $el.off ".bindDOMSubtreeModified"
+    $el.on "DOMSubtreeModified", (event) ->
+      syncTimeout = setTimeout(->
+        clearTimeout syncTimeout
+        self.cursorCharacterOffset = getCaretCharacterOffsetWithin(event.target)
+        handleContentChange() unless addingRemoteChanges
+        self.cursorCharacterOffset = undefined
+      , 500)
 
   $el.on "paste", (event) ->
     event.preventDefault()
@@ -762,6 +764,10 @@ window.MochiEditor = (noteId, username) ->
   #     }
   #     return tasks;
   # }
+  setupLinesArray = ->
+    $el.find("[data-timestamp]").each ->
+      linesArray[$(@).data('timestamp')] = $(@).html()
+
   self.show = ->
     $noteEl.show()
 
@@ -915,10 +921,15 @@ window.MochiEditor = (noteId, username) ->
   #     };
   # }
   setEditable true
+
+  setupLinesArray()
+
   socket = io.connect()
+
   socket.emit "setup",
     noteId: noteId
     username: username
+
   socket.on "note.lineSynced", (data, username) ->
     addingRemoteChanges = true
     $existingLine = lineForTimestamp(data.timestamp)
