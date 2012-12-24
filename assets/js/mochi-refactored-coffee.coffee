@@ -14,6 +14,9 @@ window.MochiEditor = (noteId, username) ->
   self = this
   noteId = noteId
   username = username || "noname"
+  setupParams =
+    noteId: noteId
+    username: username
   $el = $("#editor")
   $titleEl = $("#title")
   $titleHint = $("#title-hint")
@@ -318,7 +321,7 @@ window.MochiEditor = (noteId, username) ->
     syncUp()
 
   syncUp = ->
-    socket.emit "syncUp", syncQueue.splice(0)
+    socket.emit "syncUp", syncQueue.splice(0), setupParams
 
   # handleNoteChange();
   handleSelectionChange = ->
@@ -936,9 +939,7 @@ window.MochiEditor = (noteId, username) ->
 
   socket = io.connect()
 
-  socket.emit "setup",
-    noteId: noteId
-    username: username
+  socket.emit "setup", setupParams
 
   socket.on "note.lineSynced", (data, username) ->
     addingRemoteChanges = true

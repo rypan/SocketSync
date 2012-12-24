@@ -69,14 +69,17 @@ app.get '/note/:id', (req, res) ->
 
 io.sockets.on 'connection', (socket) ->
 
-  socket.on 'setup', (params) =>
+  setupSocket = (params, cb) =>
     socket.noteId = params.noteId
     socket.username = params.username
     socket.join(socket.noteId)
     Note.findById socket.noteId, (err, note) =>
       @note = note
+      if cb then cb()
 
-  socket.on 'syncUp', (syncQueue) =>
+  socket.on 'setup', setupSocket
+
+  socket.on 'syncUp', (syncQueue, setupParams) =>
 
     processSyncQueue = (syncQueue) =>
       return if syncQueue.length is 0
@@ -86,8 +89,11 @@ io.sockets.on 'connection', (socket) ->
         socket.broadcast.to(@note.id).emit eventName, params, socket.username
         processSyncQueue(syncQueue)
 
-
-    processSyncQueue(syncQueue)
+    if !@note
+      setupSocket setupParams, ->
+        processSyncQueue(syncQueue)
+    else
+      processSyncQueue(syncQueue)
 
   # socket.on 'note.syncLine', (data) =>
   #   # console.log data
