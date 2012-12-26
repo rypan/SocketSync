@@ -172,11 +172,12 @@ window.MochiEditor = (noteId, username) ->
   syncQueue = []
 
   # this array holds a complete representation of our note, almost like a shadow-DOM,
-  # except it's just a javascript array.
-  #
-  # this allow us to compare changes quickly and only sync what needs to be synced.
+  # except it's just a javascript array. this allow us to compare changes quickly and
+  # only sync lines that need syncing.
   linesArray = {}
+
   cursors = {}
+  cursorTimeouts = {}
 
   # setting this to "true" will temporarily disable the event listeners for DOM changes.
   stopListeningForChanges = false
@@ -369,6 +370,11 @@ window.MochiEditor = (noteId, username) ->
         top: $(lastNode).offset().top
 
     cursor.css(offset).show()
+
+    cursorTimeouts[username] ||= setTimeout ->
+      cursorTimeouts[username] = false
+      cursor.hide()
+    , 10000
 
   updateTitleHint = ->
     if $titleEl.val()
