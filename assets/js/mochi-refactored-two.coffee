@@ -1,5 +1,50 @@
 Helper =
 
+  findPixelOffsetForNode: (node, characterOffset) ->
+
+    $node = $(node)
+    $line = $node.closest(".node")
+
+    if node.nodeType is 3
+
+      text = node.textContent
+
+      if characterOffset is 0
+        lastChar = text.substr(-1)
+        newText = text.slice(0, -1)
+        tempEl = "<span id='getPos'>#{lastChar}</span>"
+      else
+        replaceChar = text[characterOffset - 1]
+        newText = if characterOffset is 1 then "" else text.slice 0, characterOffset - 1
+        tempEl = "<span id='getPos'>#{replaceChar || ''}</span>"
+
+      node.textContent = newText
+      $line.append(tempEl)
+      offset =
+        left: $("#getPos").offset().left + $("#getPos").width()
+        top: $("#getPos").offset().top
+      $line.find("#getPos").remove()
+      node.textContent = text
+
+
+    else if node.nodeName is "BR"
+
+      $(node).remove()
+      $line.append("<span id='getPos'><br /></span>")
+      offset =
+        left: $("#getPos").offset().left + $("#getPos").width()
+        top: $("#getPos").offset().top
+      $line.find("#getPos").remove()
+      $line.append("<br />")
+
+    else
+      # @ todo find offset in other elements
+      offset =
+        left: $node.offset().left + $node.width()
+        top: $node.offset().top
+
+    offset
+
   isBefore: (a, aOffset, b, bOffset) ->
     rangeA = document.createRange()
     rangeB = document.createRange()
@@ -18,39 +63,6 @@ Helper =
       else
         return text
     ""
-
-  findPixelOffsetInTextNode: ($line, lastNode, characterOffset) ->
-    text = lastNode.textContent
-
-    if characterOffset is 0
-      lastChar = text.substr(-1)
-      newText = text.slice(0, -1)
-      tempEl = "<span id='getPos'>#{lastChar}</span>"
-    else
-      replaceChar = text[characterOffset - 1]
-      newText = if characterOffset is 1 then "" else text.slice 0, characterOffset - 1
-      tempEl = "<span id='getPos'>#{replaceChar || ''}</span>"
-
-    lastNode.textContent = newText
-    $line.append(tempEl)
-    offset =
-      left: $("#getPos").offset().left + $("#getPos").width()
-      top: $("#getPos").offset().top
-    $line.find("#getPos").remove()
-    lastNode.textContent = text
-
-    offset
-
-  findPixelOffsetInBrNode: ($line, $br) ->
-    $br.remove()
-    $line.append("<span id='getPos'><br /></span>")
-    offset =
-      left: $("#getPos").offset().left + $("#getPos").width()
-      top: $("#getPos").offset().top
-    $line.find("#getPos").remove()
-    $line.append("<br />")
-
-    offset
 
   # get the distance between the end of the line and the user's cursor
   getCaretCharacterOffsetWithin: (element) ->
@@ -351,23 +363,12 @@ window.MochiEditor = (noteId, username) ->
     $line
 
   # locate the pixel offset of another user's cursor and display it accordingly
-  setOtherUsersCursorOnLine = ($line, characterOffset, username) ->
+  setOtherUsersCursorOnLine = ($line, characterOffset, nodeOffset = 0, username) ->
     cursor = getCursor(username)
 
-    lastNode = $line[0].childNodes.item($line[0].childNodes.length - 1) || $line[0]
+    node = $line[0].childNodes.item(nodeOffset)
 
-    if lastNode.nodeType is 3 # last child is a text node, wrap it in a span
-      offset = Helper.findPixelOffsetInTextNode($line, lastNode, characterOffset)
-
-    else if lastNode.nodeName is "BR"
-      $br = $line.children(":last")
-      offset = Helper.findPixelOffsetInBrNode($line, $br)
-
-    else
-      # @ todo find offset in other elements
-      offset =
-        left: $(lastNode).offset().left + $(lastNode).width()
-        top: $(lastNode).offset().top
+    offset = Helper.findPixelOffsetForNode(node, characterOffset)
 
     cursor.css(offset).show()
 
@@ -589,7 +590,7 @@ window.MochiEditor = (noteId, username) ->
         else
           $underneathLine.after $line
 
-      setOtherUsersCursorOnLine($line, data.characterOffset, username)
+      setOtherUsersCursorOnLine($line, data.characterOffset, data.nodeOffset, username)
 
       linesArray[data.timestamp] = data.text
 
