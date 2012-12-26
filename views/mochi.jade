@@ -2,15 +2,15 @@ doctype 5
 html
   head
     title Mochi Test
-    script(src="http://ajax.googleapis.com/ajax/libs/jquery/1.8.3/jquery.min.js")
+    != js("vendor/jquery.js")
     != js("vendor/jcade.js")
     != js("vendor/socket.io.js")
-    != js("mochi-refactored-coffee")
+    != js("mochi-refactored-two")
     != css("mochi")
 
   #note
     input#title.title(type="text")
     #title-hint.text-hint Title
-    | <div id="editor">!{note.content ? note.content : "<div class='node' data-timestamp='"+Date.now()+"'><br /></div>"}</div>
+    | <div id="editor">!{note.content ? note.content : "<div data-timestamp='"+Date.now()+"'><br /></div>"}</div>
 
   | <script> $(function(){ window.editor = new MochiEditor("#{note.id}", /*prompt('Enter a username.')*/""+Math.floor(Math.random() * 100)); }); </script>
