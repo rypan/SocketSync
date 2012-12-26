@@ -49,7 +49,7 @@ noteSchema.methods.syncLine = (data, cb) ->
 
   @content = $.html()
   @save ->
-    cb('note.lineSynced', data)
+    cb('lineSynced', data)
 
 # data params: timestamp
 noteSchema.methods.removeLine = (data, cb) ->
@@ -57,7 +57,7 @@ noteSchema.methods.removeLine = (data, cb) ->
   $("div[data-timestamp=#{data.timestamp}]").remove()
   @content = $.html()
   @save ->
-    cb('note.lineRemoved', data)
+    cb('lineRemoved', data)
 
 noteSchema.pre 'save', (next) ->
   @updated_at = new Date

@@ -65,6 +65,12 @@ app.get '/note/:id', (req, res) ->
   Note.findById req.params.id, (err, note) ->
     res.render "note", {note: note}
 
+syncQueues = {}
+syncTimeouts = {}
+
+getSyncQueue = (note) ->
+  (syncQueues[note.id] ||= []) unless !note.id
+
 # routes.init(app)
 
 io.sockets.on 'connection', (socket) ->
@@ -77,6 +83,13 @@ io.sockets.on 'connection', (socket) ->
       @note = note
       if cb then cb()
 
+  queueSyncDown = (note) ->
+
+    syncTimeouts[note.id] ||= setTimeout =>
+      syncTimeouts[note.id] = false
+      socket.broadcast.to(note.id).emit "syncDown", getSyncQueue(note).splice(0)
+    , 500
+
   socket.on 'setup', setupSocket
 
   socket.on 'syncUp', (syncQueue, setupParams) =>
@@ -86,8 +99,10 @@ io.sockets.on 'connection', (socket) ->
       item = syncQueue.shift()
 
       @note[item[0]] item[1], (eventName, params) =>
-        socket.broadcast.to(@note.id).emit eventName, params, socket.username
+        getSyncQueue(@note).push [eventName, params, socket.username]
         processSyncQueue(syncQueue)
+
+      queueSyncDown(@note)
 
     if !@note
       setupSocket setupParams, ->

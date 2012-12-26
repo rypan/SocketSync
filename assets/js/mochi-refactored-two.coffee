@@ -368,7 +368,7 @@ window.MochiEditor = (noteId, username) ->
         left: $(lastNode).offset().left + $(lastNode).width()
         top: $(lastNode).offset().top
 
-    cursors.css(offset).show()
+    cursor.css(offset).show()
 
   updateTitleHint = ->
     if $titleEl.val()
@@ -429,6 +429,7 @@ window.MochiEditor = (noteId, username) ->
   # push the entire syncQueue to the server, empty the syncQueue.
   syncUp = ->
     socket.emit "syncUp", syncQueue.splice(0), setupParams
+    console.log 'sent'
 
   handleSelectionChange = ->
     #
@@ -557,36 +558,39 @@ window.MochiEditor = (noteId, username) ->
   socket = io.connect()
   socket.emit "setup", setupParams
 
-  socket.on "note.lineSynced", (data, username) ->
-    stopListeningForChanges = true
-    $line = nodeForTimestamp(data.timestamp)
+  socket.on "syncDown", (messages) ->
+    ignore_changes ->
+      for message in messages
+        console.log message
+        socketEvents[message[0]](message[1], message[2])
 
-    if $line.length > 0
-      # update line
-      $line.html data.text
+  socketEvents =
 
-    else
-      # create line
-      $line = $("<div class='node' data-timestamp='" + data.timestamp + "'>" + data.text + "</div>")
+    lineSynced: (data, username) ->
+      $line = nodeForTimestamp(data.timestamp)
 
-        # @possible ==
-      $underneathLine = nodeForUnderneathTimestamps(data.underneath_timestamps)
+      if $line.length > 0
+        # update line
+        $line.html data.text
 
-      if !data.underneath_timestamps? or $underneathLine.length is 0
-        $("#editor").prepend $line
       else
-        $underneathLine.after $line
+        # create line
+        $line = $("<div class='node' data-timestamp='" + data.timestamp + "'>" + data.text + "</div>")
 
-    setOtherUsersCursorOnLine($line, data.characterOffset, username)
+          # @possible ==
+        $underneathLine = nodeForUnderneathTimestamps(data.underneath_timestamps)
 
-    linesArray[data.timestamp] = data.text
-    stopListeningForChanges = false
+        if !data.underneath_timestamps? or $underneathLine.length is 0
+          $("#editor").prepend $line
+        else
+          $underneathLine.after $line
 
-  socket.on "note.lineRemoved", (data, username) ->
-    stopListeningForChanges = true
-    nodeForTimestamp(data.timestamp).remove()
-    delete linesArray[data.timestamp]
+      setOtherUsersCursorOnLine($line, data.characterOffset, username)
 
-    stopListeningForChanges = false
+      linesArray[data.timestamp] = data.text
+
+    lineRemoved: (data, username) ->
+      nodeForTimestamp(data.timestamp).remove()
+      delete linesArray[data.timestamp]
 
   return
