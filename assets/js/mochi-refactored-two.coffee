@@ -434,8 +434,7 @@ window.MochiEditor = (noteId, username) ->
 
   # push the entire syncQueue to the server, empty the syncQueue.
   syncUp = ->
-    socket.emit "syncUp", syncQueue.splice(0), setupParams
-    console.log 'sent'
+    socket.emit "syncUp", syncQueue.splice(0), setupParams if syncQueue.length > 0
 
   handleSelectionChange = ->
     #
@@ -567,7 +566,6 @@ window.MochiEditor = (noteId, username) ->
   socket.on "syncDown", (messages) ->
     ignore_changes ->
       for message in messages
-        console.log message
         socketEvents[message[0]](message[1], message[2])
 
   socketEvents =
