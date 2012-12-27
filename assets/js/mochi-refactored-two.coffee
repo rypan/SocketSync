@@ -399,11 +399,18 @@ window.MochiEditor = (noteId, username) ->
 
     returnArray
 
+  getSanitizedLineHtml = ($line) ->
+    $line = $line.clone()
+    $line.find(".checkbox-animated").removeClass('checkbox-animated')
+    html = $line.html()
+    $line.remove()
+    html
+
   # if the given line has changed, update its counterpart in linesArray and add a sync event to the queue
   syncLine = ($line, cursorOffset) ->
     return if linesArray[$line.data("timestamp")] is $line.html()
     timestamp = $line.data("timestamp")
-    linesArray[timestamp] = $line.html()
+    linesArray[timestamp] = getSanitizedLineHtml($line)
     syncQueue.push ["syncLine",
       timestamp: timestamp
       underneath_timestamps: buildUnderneathTimestamps($line)
