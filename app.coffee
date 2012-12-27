@@ -65,15 +65,13 @@ app.get '/note/:id', (req, res) ->
   Note.findById req.params.id, (err, note) ->
     res.render "note", {note: note}
 
-syncQueues = {}
-syncTimeouts = {}
-
-getSyncQueue = (note) ->
-  (syncQueues[note.id] ||= []) unless !note.id
-
-# routes.init(app)
-
 io.sockets.on 'connection', (socket) ->
+
+  syncQueues = {}
+  syncTimeouts = {}
+
+  getSyncQueue = (note) ->
+    (syncQueues[note.id] ||= []) unless !note.id
 
   setupSocket = (params, cb) =>
     socket.noteId = params.noteId
@@ -109,15 +107,6 @@ io.sockets.on 'connection', (socket) ->
         processSyncQueue(syncQueue)
     else
       processSyncQueue(syncQueue)
-
-  # socket.on 'note.syncLine', (data) =>
-  #   # console.log data
-  #   @note.syncLine data,
-
-  # socket.on 'note.removeLine', (data) =>
-  #   console.log "removeLine", data
-  #   @note.removeLine data, (eventName, params) =>
-  #     socket.broadcast.to(@note.id).emit eventName, params, socket.username
 
 server.listen app.get('port'), ->
   console.log("Express server listening on port " + app.get('port')) unless process.env.SUBDOMAIN
