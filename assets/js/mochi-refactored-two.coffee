@@ -66,6 +66,11 @@ Helper =
 
   # get the distance between the end of the line and the user's cursor
   getCaretCharacterOffsetWithin: (element) ->
+    if !element or element.id is "editor" or !element.parentNode
+      return {character: 0, node: 0}
+    else if element.parentNode.id is "editor"
+      return {character: 1, node: 0}
+
     caretOffset = 0
 
     unless typeof window.getSelection is "undefined" or !window.getSelection().anchorNode
@@ -82,7 +87,16 @@ Helper =
       preCaretTextRange.setEndPoint "EndToEnd", textRange
       caretOffset = preCaretTextRange.text.length
 
-    caretOffset
+
+    nodeOffset = 0
+    e = element
+    while e = e.previousSibling
+      nodeOffset++
+
+    return {
+      character: caretOffset
+      node: nodeOffset
+    }
 
   preserveSelection: (cb) ->
     selection = Helper.saveSelection()
@@ -216,7 +230,7 @@ window.MochiEditor = (noteId, username) ->
 
   # listen for modifications to the dom, and queue a timeout that will handle the modifications.
   $editor.on "DOMSubtreeModified", (event) ->
-    queueContentChange(event)
+    queueContentChange(event.srcElement)
 
   # When we remove a top-level node, remove its counterpart from linesArray
   $editor.on "DOMNodeRemoved", (e) ->
@@ -331,11 +345,12 @@ window.MochiEditor = (noteId, username) ->
       i++
 
   # set a timeout for handleContentChange(), to ensure it gets called no more than once every X ms.
-  queueContentChange = (event) ->
+  queueContentChange = (srcElement) ->
     syncTimeout ||= setTimeout ->
       syncTimeout = false
-      cursorOffset = if event then Helper.getCaretCharacterOffsetWithin(event.target)
-      handleContentChange(cursorOffset) unless stopListeningForChanges
+      offset = if srcElement then Helper.getCaretCharacterOffsetWithin(srcElement)
+      console.log offset
+      handleContentChange(offset) unless stopListeningForChanges
     , 500
 
   # find or create a remote user's cursor
@@ -363,17 +378,17 @@ window.MochiEditor = (noteId, username) ->
     $line
 
   # locate the pixel offset of another user's cursor and display it accordingly
-  setOtherUsersCursorOnLine = ($line, characterOffset, nodeOffset = 0, username) ->
+  setOtherUsersCursorOnLine = ($line, offset, username) ->
     cursor = getCursor(username)
 
-    node = $line[0].childNodes.item(nodeOffset)
+    node = $line[0].childNodes.item(offset.node || 0)
 
-    offset = Helper.findPixelOffsetForNode(node, characterOffset)
+    offset = Helper.findPixelOffsetForNode(node, offset.character || 0)
 
     cursor.css(offset).show()
 
-    cursorTimeouts[username] ||= setTimeout ->
-      cursorTimeouts[username] = false
+    clearTimeout(cursorTimeouts[username])
+    cursorTimeouts[username] = setTimeout ->
       cursor.hide()
     , 10000
 
@@ -407,7 +422,7 @@ window.MochiEditor = (noteId, username) ->
     html
 
   # if the given line has changed, update its counterpart in linesArray and add a sync event to the queue
-  syncLine = ($line, cursorOffset) ->
+  syncLine = ($line, offset) ->
     return if linesArray[$line.data("timestamp")] is $line.html()
     timestamp = $line.data("timestamp")
     linesArray[timestamp] = getSanitizedLineHtml($line)
@@ -415,7 +430,7 @@ window.MochiEditor = (noteId, username) ->
       timestamp: timestamp
       underneath_timestamps: buildUnderneathTimestamps($line)
       text: linesArray[timestamp]
-      characterOffset: cursorOffset
+      offset: offset
     ]
 
   # remove a line (by timestamp) from the linesArray, and add a 'removeLine' event to the queue
@@ -430,11 +445,11 @@ window.MochiEditor = (noteId, username) ->
         removeLine(timestamp)
 
   # call syncLine() for each top-level node
-  handleContentChange = (cursorOffset = 0) ->
+  handleContentChange = (offset) ->
     $line = $editor.children(":first")
 
     while $line.length > 0
-      syncLine $line, cursorOffset
+      syncLine $line, offset
       $line = $line.next()
 
     cleanupSync()
@@ -573,12 +588,12 @@ window.MochiEditor = (noteId, username) ->
 
   socket.on "syncDown", (messages) ->
     ignore_changes ->
-      for message in messages
-        socketEvents[message[0]](message[1], message[2])
+      for message, i in messages
+        socketEvents[message[0]](message[1], message[2], i is (messages.length - 1))
 
   socketEvents =
 
-    lineSynced: (data, username) ->
+    lineSynced: (data, username, setCursor = false) ->
       $line = nodeForTimestamp(data.timestamp)
 
       if $line.length > 0
@@ -597,11 +612,11 @@ window.MochiEditor = (noteId, username) ->
         else
           $underneathLine.after $line
 
-      setOtherUsersCursorOnLine($line, data.characterOffset, data.nodeOffset, username)
+      setOtherUsersCursorOnLine($line, data.offset, username) if setCursor
 
       linesArray[data.timestamp] = data.text
 
-    lineRemoved: (data, username) ->
+    lineRemoved: (data, username, setCursor = false) ->
       nodeForTimestamp(data.timestamp).remove()
       delete linesArray[data.timestamp]
 
