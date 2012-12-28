@@ -44,7 +44,6 @@ noteSchema.methods.syncLine = (data, cb) ->
       $.root().prepend(newLine)
 
     else
-      console.log data.underneath_timestamps
       $underneath.after(newLine)
 
   @content = $.html()
