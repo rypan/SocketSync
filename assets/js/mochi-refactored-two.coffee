@@ -2,6 +2,8 @@ Helper =
 
   findPixelOffsetForNode: (node, characterOffset) ->
 
+    return if !node
+
     $node = $(node)
     $line = $node.closest(".node")
 
@@ -382,9 +384,9 @@ window.MochiEditor = (noteId, username) ->
 
     node = $line[0].childNodes.item(offset.node || 0)
 
-    console.log node
-
     offset = Helper.findPixelOffsetForNode(node, offset.character || 0)
+
+    return unless offset
 
     cursor.css(offset).show()
 
