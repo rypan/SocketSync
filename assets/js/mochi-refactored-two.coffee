@@ -12,18 +12,18 @@ Helper =
       if characterOffset is 0
         lastChar = text.substr(-1)
         newText = text.slice(0, -1)
-        tempEl = "<span id='getPos'>#{lastChar}</span>"
+        $tempEl = $("<span id='getPos'>#{lastChar}</span>")
       else
         replaceChar = text[characterOffset - 1]
         newText = if characterOffset is 1 then "" else text.slice 0, characterOffset - 1
-        tempEl = "<span id='getPos'>#{replaceChar || ''}</span>"
+        $tempEl = $("<span id='getPos'>#{replaceChar || ''}</span>")
 
       node.textContent = newText
-      $line.append(tempEl)
+      $(node).after($tempEl)
       offset =
-        left: $("#getPos").offset().left + $("#getPos").width()
-        top: $("#getPos").offset().top
-      $line.find("#getPos").remove()
+        left: $tempEl.offset().left + $tempEl.width()
+        top: $tempEl.offset().top
+      $tempEl.remove()
       node.textContent = text
 
 
@@ -230,7 +230,7 @@ window.MochiEditor = (noteId, username) ->
 
   # listen for modifications to the dom, and queue a timeout that will handle the modifications.
   $editor.on "DOMSubtreeModified", (event) ->
-    queueContentChange(event.srcElement)
+    queueContentChange(event.srcElement) unless stopListeningForChanges
 
   # When we remove a top-level node, remove its counterpart from linesArray
   $editor.on "DOMNodeRemoved", (e) ->
@@ -349,7 +349,6 @@ window.MochiEditor = (noteId, username) ->
     syncTimeout ||= setTimeout ->
       syncTimeout = false
       offset = if srcElement then Helper.getCaretCharacterOffsetWithin(srcElement)
-      console.log offset
       handleContentChange(offset) unless stopListeningForChanges
     , 500
 
@@ -382,6 +381,8 @@ window.MochiEditor = (noteId, username) ->
     cursor = getCursor(username)
 
     node = $line[0].childNodes.item(offset.node || 0)
+
+    console.log node
 
     offset = Helper.findPixelOffsetForNode(node, offset.character || 0)
 
