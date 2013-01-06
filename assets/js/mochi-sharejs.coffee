@@ -217,19 +217,6 @@ window.MochiEditor = (noteId, username) ->
   $editor.on "DOMSubtreeModified", =>
     @queueContentChange() unless stopListeningForChanges
 
-  # When we remove a top-level node, remove its counterpart from linesArray
-  # $editor.on "DOMNodeRemoved", (e) ->
-  #   $node = $(e.srcElement)
-  #   return unless is_top_level_node($node) and !stopListeningForChanges
-  #   removeLine $node.data("timestamp") if $node.hasClass("node")
-
-  # contenteditable inserts nodes by copying them from the previous one. listen for this event,
-  # so we can change the timestamps to ensure we don't get duplicates.
-  # $editor.on "DOMNodeInserted", (e) ->
-  #   $node = $(e.srcElement)
-  #   return unless is_top_level_node($node) and !stopListeningForChanges
-  #   timestamp_nodes($node)
-
   # on paste, use our helper to get the pasted data. insert it into the editor,
   # and make sure that we don't have multiple levels of top-level nodes.
   $editor.on "paste", (event) ->
@@ -340,7 +327,6 @@ window.MochiEditor = (noteId, username) ->
       # IE constantly replaces unix newlines with \r\n. ShareJS docs
       # should only have unix newlines.
       @cachedValue = html
-      console.log @doc.getText(), html
       applyChange @doc.getText(), html.replace /\r\n/g, '\n'
 
   updateTitleHint = ->
