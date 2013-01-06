@@ -11,20 +11,18 @@
   },
   "main": "app.coffee",
   "dependencies": {
-    "coffee-script": "*",
+    "coffee-script": "1.4.0",
     "express": "3.0.0rc3",
-    "connect": "*",
-    "connect-assets": "*",
-    "express-expose": "*",
-    "mongoose": "*",
-    "express-mongoose": "*",
-    "socket.io": "*",
-    "jade": "*",
-    "cheerio": "*",
-    "redis": ">= 0.7.0",
+    "connect": "2.7.2",
+    "connect-assets": "2.3.3",
+    "mongoose": "3.5.1",
+    "express-mongoose": "0.1.0",
+    "jade": "0.27.7",
+    "cheerio": "0.10.3",
+    "redis": "0.8.2",
     "connect-redis": "1.0.6",
-    "stylus": "*",
-    "share": "*"
+    "stylus": "0.32.0",
+    "share": "0.5.0"
   },
   "subdomain": "socketsync"
 }
