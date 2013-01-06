@@ -51,6 +51,9 @@ app.configure 'development', ->
 Note = require('./models').note
 
 app.get '/', (req, res) ->
+  res.send 'index'
+
+app.get '/mochi', (req, res) ->
   Note.create {}, (err, note) ->
     res.redirect "mochi/#{note.id}"
 
@@ -71,7 +74,6 @@ if process.env.REDIS_HOST
 else
   redisConfig.hostname = "localhost"
   redisConfig.auth = ""
-
 
 options = {db: redisConfig, browserChannel: {cors:"*"}}
 
