@@ -322,7 +322,7 @@ window.MochiEditor = (noteId, username) ->
   # set a timeout for handleContentChange(), to ensure it gets called no more than once every X ms.
   this.queueContentChange = ->
     return if !@doc
-    html = $editor.html().trim()
+    html = $editor.html()
     if html != @cachedValue
       # IE constantly replaces unix newlines with \r\n. ShareJS docs
       # should only have unix newlines.
@@ -429,12 +429,12 @@ window.MochiEditor = (noteId, username) ->
 
   sharejs.open noteId, 'text', 'http://localhost:8000/channel', (error, doc) =>
     $editor.html doc.getText()
-    @cachedValue = $editor.html().trim()
+    @cachedValue = $editor.html()
     @doc = doc
 
     doc.on 'remoteop', (ops) =>
 
-      tempValue = $editor.html().trim()
+      tempValue = $editor.html()
 
       for op in ops
         if op.i? # insert
@@ -445,6 +445,6 @@ window.MochiEditor = (noteId, username) ->
       ignoreChanges =>
         $editor.html tempValue
 
-      @cachedValue = $editor.html().trim()
+      @cachedValue = $editor.html()
 
   return
