@@ -256,8 +256,7 @@ window.MochiEditor = (noteId, username) ->
 
     # key: up
     # if we're at the top of the editor and we hit the up key, focus the title input
-    else
-      if keyCode is 38
+    else if keyCode is 38
         selection = window.getSelection()
         line = getLine(selection.anchorNode)
         unless line.previousSibling
@@ -271,21 +270,43 @@ window.MochiEditor = (noteId, username) ->
             currentTop = startTop
           self.focusTitle()  if currentTop <= startTop
 
-      # key: tab
-      # insert a tab into the editor
-      else if keyCode is 9
-        event.preventDefault()
-        insertHtml "\t"
+    # key: tab
+    # insert a tab into the editor
+    else if keyCode is 9
+      event.preventDefault()
+      insertHtml "\t"
 
-      # key: return
-      # if we're on an indented line and we hit return, indent the newly-created line too
-      else if keyCode is 13
-        sel = window.getSelection()
-        indent = Helper.getIndentString(getLine(sel.anchorNode).firstChild)
-        if indent
-          setTimeout (->
-            insertHtml indent # @todo why timeout?
-          ), 0
+    # key: return
+    # if we're on an indented line and we hit return, indent the newly-created line too
+    else if keyCode is 13
+      sel = window.getSelection()
+      indent = Helper.getIndentString(getLine(sel.anchorNode).firstChild)
+      if indent
+        setTimeout (->
+          insertHtml indent # @todo why timeout?
+        ), 0
+
+    ################################################
+    # Formatting Hotkeys
+    # @todo remove these if running in native container?
+    ################################################
+
+    else if (event.ctrlKey || event.metaKey) and keyCode is 66 # ctrl+b
+      event.preventDefault()
+      document.execCommand "bold"
+
+    else if (event.ctrlKey || event.metaKey) and keyCode is 73 # ctrl+i
+      event.preventDefault()
+      document.execCommand "italic"
+
+    else if (event.ctrlKey || event.metaKey) and keyCode is 85 # ctrl+u
+      event.preventDefault()
+      document.execCommand "underline"
+
+    else if (event.ctrlKey || event.metaKey) and keyCode is 83 # ctrl+s
+      event.preventDefault()
+      document.execCommand "strikeThrough"
+
 
   # toggle checkboxes when clicked
   $editor.on "click", ".checkbox", (event) ->
