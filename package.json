@@ -9,6 +9,7 @@
   "scripts": {
     "start": "coffee app.coffee"
   },
+  "main": "app.coffee",
   "dependencies": {
     "coffee-script": "*",
     "express": "3.0.0rc3",
