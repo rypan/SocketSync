@@ -308,9 +308,7 @@ window.MochiEditor = (noteId, username) ->
     commonEnd++ while oldval.charAt(oldval.length - 1 - commonEnd) == newval.charAt(newval.length - 1 - commonEnd) and
       commonEnd + commonStart < oldval.length and commonEnd + commonStart < newval.length
 
-    console.log(Date.now(), "del", commonStart, oldval.length - commonStart - commonEnd, @doc.getText()) unless oldval.length == commonStart + commonEnd
     @doc.del commonStart, oldval.length - commonStart - commonEnd unless oldval.length == commonStart + commonEnd
-    console.log(Date.now(), "insert", commonStart, newval[commonStart ... newval.length - commonEnd]) unless newval.length == commonStart + commonEnd
     @doc.insert commonStart, newval[commonStart ... newval.length - commonEnd] unless newval.length == commonStart + commonEnd
 
   # executes the provided callback while ignoring changes to the dom.
@@ -324,7 +322,7 @@ window.MochiEditor = (noteId, username) ->
   # set a timeout for handleContentChange(), to ensure it gets called no more than once every X ms.
   this.queueContentChange = ->
     return if !@doc
-    html = $editor.html()
+    html = $editor.html().trim()
     if html != @cachedValue
       # IE constantly replaces unix newlines with \r\n. ShareJS docs
       # should only have unix newlines.
@@ -349,10 +347,13 @@ window.MochiEditor = (noteId, username) ->
   addCheckbox = ($line) ->
     checkbox = "<img class='checkbox' src='' width='0' height='0' />"
 
-    # if line begins with whitespace, add after that whitespace
-    whitespace = Helper.getIndentString($line[0].childNodes[0])
-    $line[0].childNodes[0].textContent = $line[0].childNodes[0].textContent.replace(/^\s+/, "")
-    $($line[0].childNodes[0]).before(whitespace + checkbox + " ")
+    ignoreChanges ->
+      # if line begins with whitespace, add after that whitespace
+      whitespace = Helper.getIndentString($line[0].childNodes[0])
+      $line[0].childNodes[0].textContent = $line[0].childNodes[0].textContent.replace(/^\s+/, "")
+      $($line[0].childNodes[0]).before(whitespace + checkbox + " ")
+
+    self.queueContentChange()
 
   # finds the top-level node for a given node
   getLine = (node) ->
@@ -403,12 +404,12 @@ window.MochiEditor = (noteId, username) ->
       if $(@).find(".checkbox").length > 0
         toggleCheckbox($(@).find(".checkbox"))
 
-    @queueContentChange()
+    self.queueContentChange()
 
   # toggles a checkbox's state from done/not done
   toggleCheckbox = ($checkbox) ->
     $checkbox.toggleClass("checkbox-checked")
-    @queueContentChange()
+    self.queueContentChange()
 
   this.focusTitle = ->
     $titleEl.focus()
@@ -428,38 +429,22 @@ window.MochiEditor = (noteId, username) ->
 
   sharejs.open noteId, 'text', 'http://localhost:8000/channel', (error, doc) =>
     $editor.html doc.getText()
-    @cachedValue = $editor.html()
+    @cachedValue = $editor.html().trim()
     @doc = doc
 
-    # doc.on 'insert', (pos, text) =>
-    #   ignoreChanges =>
-    #       @cachedValue = $editor.html()
-    #       # console.log $editor.html(), $editor[0].innerHTML
-    #       # console.log "received insert", pos, text, @cachedValue
-    #       # console.log "1: "+ @cachedValue[...pos], "2: "+text, "3: "+@cachedValue[pos..]
-    #       # console.log @cachedValue[...pos] + text + @cachedValue[pos..]
-    #       $editor.html @cachedValue[...pos] + text + @cachedValue[pos..]
-
-    # doc.on 'delete', (pos, text) =>
-    #   ignoreChanges =>
-    #       @cachedValue = $editor.html()
-    #       # console.log "received delete", pos, text.length, @cachedValue
-    #       $editor.html @cachedValue[...pos] + @cachedValue[pos + text.length..]
-
     doc.on 'remoteop', (ops) =>
-      console.log 'remoteop', ops
 
-      tempValue = $editor.html()
+      tempValue = $editor.html().trim()
 
       for op in ops
         if op.i? # insert
-          tempValue = tempValue[...op.p] + op.i + @cachedValue[op.p..]
+          tempValue = tempValue[...op.p] + op.i + tempValue[op.p..]
         else if op.d? # delete
           tempValue = tempValue[...op.p] + tempValue[op.p + op.d.length..]
 
       ignoreChanges =>
         $editor.html tempValue
 
-      @cachedValue = tempValue
+      @cachedValue = $editor.html().trim()
 
   return
