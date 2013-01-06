@@ -243,7 +243,7 @@ window.MochiEditor = (noteId, username) ->
     if keyCode is 32
       sel = window.getSelection()
       line = getSelectedLines()[0]
-      if line.childNodes[0].textContent.match(/^\s*\+$/)
+      if line.childNodes[0] and line.childNodes[0].textContent.match(/^\s*\+$/)
         line.childNodes[0].textContent = line.childNodes[0].textContent.replace(/\+\s*$/, '')
         addCheckbox($(line))
         sel.modify "move", "forward", "lineboundary"
@@ -308,11 +308,13 @@ window.MochiEditor = (noteId, username) ->
     commonEnd++ while oldval.charAt(oldval.length - 1 - commonEnd) == newval.charAt(newval.length - 1 - commonEnd) and
       commonEnd + commonStart < oldval.length and commonEnd + commonStart < newval.length
 
+    console.log(Date.now(), "del", commonStart, oldval.length - commonStart - commonEnd, @doc.getText()) unless oldval.length == commonStart + commonEnd
     @doc.del commonStart, oldval.length - commonStart - commonEnd unless oldval.length == commonStart + commonEnd
+    console.log(Date.now(), "insert", commonStart, newval[commonStart ... newval.length - commonEnd]) unless newval.length == commonStart + commonEnd
     @doc.insert commonStart, newval[commonStart ... newval.length - commonEnd] unless newval.length == commonStart + commonEnd
 
   # executes the provided callback while ignoring changes to the dom.
-  ignore_changes = (cb) ->
+  ignoreChanges = (cb) ->
     originalVal = stopListeningForChanges
     stopListeningForChanges = true
     cb()
@@ -327,7 +329,7 @@ window.MochiEditor = (noteId, username) ->
       # IE constantly replaces unix newlines with \r\n. ShareJS docs
       # should only have unix newlines.
       @cachedValue = html
-      applyChange @doc.getText(), html.replace /\r\n/g, '\n'
+      applyChange @doc.getText(), html
 
   updateTitleHint = ->
     if $titleEl.val()
@@ -345,7 +347,7 @@ window.MochiEditor = (noteId, username) ->
 
   # adds a checkbox to the given line
   addCheckbox = ($line) ->
-    checkbox = "<img class='checkbox checkbox-animated' src='' width='0' height='0' />"
+    checkbox = "<img class='checkbox' src='' width='0' height='0' />"
 
     # if line begins with whitespace, add after that whitespace
     whitespace = Helper.getIndentString($line[0].childNodes[0])
@@ -417,15 +419,47 @@ window.MochiEditor = (noteId, username) ->
   this.pasteText = (text) ->
     insertHtml text
 
+
   ################################################
   # Initial Setup
   ################################################
 
   $editor.attr "contenteditable", "true"
 
-  sharejs.open 'madarekceb', 'text', 'http://localhost:8000/channel', (error, doc) =>
+  sharejs.open noteId, 'text', 'http://localhost:8000/channel', (error, doc) =>
     $editor.html doc.getText()
     @cachedValue = $editor.html()
     @doc = doc
+
+    # doc.on 'insert', (pos, text) =>
+    #   ignoreChanges =>
+    #       @cachedValue = $editor.html()
+    #       # console.log $editor.html(), $editor[0].innerHTML
+    #       # console.log "received insert", pos, text, @cachedValue
+    #       # console.log "1: "+ @cachedValue[...pos], "2: "+text, "3: "+@cachedValue[pos..]
+    #       # console.log @cachedValue[...pos] + text + @cachedValue[pos..]
+    #       $editor.html @cachedValue[...pos] + text + @cachedValue[pos..]
+
+    # doc.on 'delete', (pos, text) =>
+    #   ignoreChanges =>
+    #       @cachedValue = $editor.html()
+    #       # console.log "received delete", pos, text.length, @cachedValue
+    #       $editor.html @cachedValue[...pos] + @cachedValue[pos + text.length..]
+
+    doc.on 'remoteop', (ops) =>
+      console.log 'remoteop', ops
+
+      tempValue = $editor.html()
+
+      for op in ops
+        if op.i? # insert
+          tempValue = tempValue[...op.p] + op.i + @cachedValue[op.p..]
+        else if op.d? # delete
+          tempValue = tempValue[...op.p] + tempValue[op.p + op.d.length..]
+
+      ignoreChanges =>
+        $editor.html tempValue
+
+      @cachedValue = tempValue
 
   return
