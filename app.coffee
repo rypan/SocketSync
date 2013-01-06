@@ -1,9 +1,9 @@
 express = require 'express'
-http = require 'http'
 path = require 'path'
 mongoose = require 'mongoose'
 redis = require 'redis'
 RedisStore  = require('connect-redis')(express);
+sharejs = require('share').server
 
 require 'express-mongoose'
 
@@ -14,9 +14,6 @@ else
 
 app = express()
 app.set("trust proxy", true)
-
-server = http.createServer(app)
-io = require('socket.io').listen(server)
 
 if process.env.REDIS_HOST
   redisStore = new RedisStore
@@ -33,7 +30,7 @@ else
     maxAge: 1209600000
 
 app.configure ->
-  app.set('port', process.env.PORT || 3000)
+  app.set('port', process.env.PORT || 8000)
   app.set('views', __dirname + '/views')
   app.set('view engine', 'jade')
   app.use(express.favicon())
@@ -65,45 +62,20 @@ app.get '/note/:id', (req, res) ->
   Note.findById req.params.id, (err, note) ->
     res.render "note", {note: note}
 
-io.sockets.on 'connection', (socket) ->
+redisConfig = {type: 'redis'}
 
-  syncEventsQueue = []
-  syncTimeouts = {}
+if process.env.REDIS_HOST
+  redisConfig.hostname = process.env.REDIS_HOST
+  redisConfig.auth = process.env.REDIS_PW
 
-  setupSocket = (params, cb) =>
-    socket.noteId = params.noteId
-    socket.username = params.username
-    socket.join(socket.noteId)
-    Note.findById socket.noteId, (err, note) =>
-      @note = note
-      if cb then cb()
+else
+  redisConfig.hostname = "localhost"
+  redisConfig.auth = ""
 
-  queueSyncDown = (note) ->
 
-    syncTimeouts[note.id] ||= setTimeout =>
-      syncTimeouts[note.id] = false
-      socket.broadcast.to(note.id).emit "syncDown", syncEventsQueue.splice(0)
-    , 500
+options = {db: redisConfig, browserChannel: {cors:"*"}}
 
-  socket.on 'setup', setupSocket
+sharejs.attach(app, options)
 
-  socket.on 'syncUp', (syncQueue, setupParams) =>
-
-    processSyncQueue = (syncQueue) =>
-      return if syncQueue.length is 0
-      item = syncQueue.shift()
-
-      @note[item[0]] item[1], (eventName, params) =>
-        syncEventsQueue.push [eventName, params, socket.username]
-        processSyncQueue(syncQueue)
-
-      queueSyncDown(@note)
-
-    if !@note
-      setupSocket setupParams, ->
-        processSyncQueue(syncQueue)
-    else
-      processSyncQueue(syncQueue)
-
-server.listen app.get('port'), ->
-  console.log("Express server listening on port " + app.get('port')) unless process.env.SUBDOMAIN
+app.listen(app.get('port'))
+console.log("Express server listening on port " + app.get('port')) unless process.env.SUBDOMAIN
