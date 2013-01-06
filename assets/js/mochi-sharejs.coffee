@@ -57,7 +57,7 @@ Helper =
     rangeA.compareBoundaryPoints(Range.START_TO_START, rangeB) is -1
 
   getIndentString: (node) ->
-    if node.nodeType is Node.TEXT_NODE
+    if node and node.nodeType is Node.TEXT_NODE
       text = node.textContent
       match = text.match(/\S/)
       if match
@@ -183,29 +183,13 @@ window.MochiEditor = (noteId, username) ->
 
   self = this
 
-  # the params used to setup our socket connection
-  setupParams =
-    noteId: noteId
-    username: username || "noname"
-
   $editor = $("#editor")
   $titleEl = $("#title")
   $titleHint = $("#title-hint")
   $noteEl = $("#note")
 
-  # holds the timeout id for our sync function
-  syncTimeout = false
-
-  # queue of changes to be synced
-  syncQueue = []
-
-  # this array holds a complete representation of our note, almost like a shadow-DOM,
-  # except it's just a javascript array. this allow us to compare changes quickly and
-  # only sync lines that need syncing.
-  linesArray = {}
-
-  cursors = {}
-  cursorTimeouts = {}
+  @doc = undefined
+  @cachedValue = undefined
 
   # setting this to "true" will temporarily disable the event listeners for DOM changes.
   stopListeningForChanges = false
@@ -227,25 +211,24 @@ window.MochiEditor = (noteId, username) ->
       event.preventDefault()
 
   $titleEl.on "input", ->
-    # @todo why is there a timeout on this?
-    setTimeout handleTitleChange, 0
+    handleTitleChange()
 
   # listen for modifications to the dom, and queue a timeout that will handle the modifications.
-  $editor.on "DOMSubtreeModified", (event) ->
-    queueContentChange(event.srcElement) unless stopListeningForChanges
+  $editor.on "DOMSubtreeModified", =>
+    @queueContentChange() unless stopListeningForChanges
 
   # When we remove a top-level node, remove its counterpart from linesArray
-  $editor.on "DOMNodeRemoved", (e) ->
-    $node = $(e.srcElement)
-    return unless is_top_level_node($node) and !stopListeningForChanges
-    removeLine $node.data("timestamp") if $node.hasClass("node")
+  # $editor.on "DOMNodeRemoved", (e) ->
+  #   $node = $(e.srcElement)
+  #   return unless is_top_level_node($node) and !stopListeningForChanges
+  #   removeLine $node.data("timestamp") if $node.hasClass("node")
 
   # contenteditable inserts nodes by copying them from the previous one. listen for this event,
   # so we can change the timestamps to ensure we don't get duplicates.
-  $editor.on "DOMNodeInserted", (e) ->
-    $node = $(e.srcElement)
-    return unless is_top_level_node($node) and !stopListeningForChanges
-    timestamp_nodes($node)
+  # $editor.on "DOMNodeInserted", (e) ->
+  #   $node = $(e.srcElement)
+  #   return unless is_top_level_node($node) and !stopListeningForChanges
+  #   timestamp_nodes($node)
 
   # on paste, use our helper to get the pasted data. insert it into the editor,
   # and make sure that we don't have multiple levels of top-level nodes.
@@ -329,6 +312,18 @@ window.MochiEditor = (noteId, username) ->
   # $editor.on "dragover", (event) ->
   #   event.preventDefault()
 
+  applyChange = (oldval, newval) =>
+    return if oldval == newval
+    commonStart = 0
+    commonStart++ while oldval.charAt(commonStart) == newval.charAt(commonStart)
+
+    commonEnd = 0
+    commonEnd++ while oldval.charAt(oldval.length - 1 - commonEnd) == newval.charAt(newval.length - 1 - commonEnd) and
+      commonEnd + commonStart < oldval.length and commonEnd + commonStart < newval.length
+
+    @doc.del commonStart, oldval.length - commonStart - commonEnd unless oldval.length == commonStart + commonEnd
+    @doc.insert commonStart, newval[commonStart ... newval.length - commonEnd] unless newval.length == commonStart + commonEnd
+
   # executes the provided callback while ignoring changes to the dom.
   ignore_changes = (cb) ->
     originalVal = stopListeningForChanges
@@ -336,64 +331,17 @@ window.MochiEditor = (noteId, username) ->
     cb()
     stopListeningForChanges = originalVal
 
-  # returns true if $node's parent is $editor
-  is_top_level_node = ($node) ->
-    $node.parent().attr('id') is $editor.attr('id')
-
-  # adds a 'data-timestamp' attributes to the given nodes
-  timestamp_nodes = ($nodes) ->
-    $nodes.each (i) ->
-      $(@).data('timestamp', "" + Date.now() + i)
-      i++
 
   # set a timeout for handleContentChange(), to ensure it gets called no more than once every X ms.
-  queueContentChange = (srcElement) ->
-    syncTimeout ||= setTimeout ->
-      syncTimeout = false
-      offset = if srcElement then Helper.getCaretCharacterOffsetWithin(srcElement)
-      handleContentChange(offset) unless stopListeningForChanges
-    , 500
-
-  # find or create a remote user's cursor
-  getCursor = (username) ->
-    if !cursors[username]
-      cursors[username] = $("<span class='cursor'><span class='name'>#{username}</span></span>")
-      $noteEl.append(cursors[username])
-
-    cursors[username]
-
-  # find the node for a given timestamp
-  nodeForTimestamp = (timestamp) ->
-    $("#editor div").filter ->
-      `$(this).data("timestamp") == timestamp`
-
-  # loop through an array of underneath timestamps and return the first
-  # node that exists. quick hack to deal with the edge case of trying to
-  # insert a line underneath a line that doesn't exist.
-  nodeForUnderneathTimestamps = (underneathTimestamps) ->
-    $line = []
-
-    while $line.length is 0 and underneathTimestamps.length > 0
-      $line = nodeForTimestamp(underneathTimestamps.shift())
-
-    $line
-
-  # locate the pixel offset of another user's cursor and display it accordingly
-  setOtherUsersCursorOnLine = ($line, offset, username) ->
-    cursor = getCursor(username)
-
-    node = $line[0].childNodes.item(offset.node || 0)
-
-    offset = Helper.findPixelOffsetForNode(node, offset.character || 0)
-
-    return unless offset
-
-    cursor.css(offset).show()
-
-    clearTimeout(cursorTimeouts[username])
-    cursorTimeouts[username] = setTimeout ->
-      cursor.hide()
-    , 10000
+  this.queueContentChange = ->
+    return if !@doc
+    html = $editor.html()
+    if html != @cachedValue
+      # IE constantly replaces unix newlines with \r\n. ShareJS docs
+      # should only have unix newlines.
+      @cachedValue = html
+      console.log @doc.getText(), html
+      applyChange @doc.getText(), html.replace /\r\n/g, '\n'
 
   updateTitleHint = ->
     if $titleEl.val()
@@ -404,66 +352,6 @@ window.MochiEditor = (noteId, username) ->
   handleTitleChange = ->
     # @todo save the title on the server
     updateTitleHint()
-
-  # build an array of timestamps from the lines preceding the given line.
-  buildUnderneathTimestamps = ($line) ->
-    i = 0
-    returnArray = []
-
-    while $line.length > 0 and i < 3
-      returnArray.push $line.prev().data("timestamp")
-      $line = $line.prev()
-      i++
-
-    returnArray
-
-  getSanitizedLineHtml = ($line) ->
-    $line = $line.clone()
-    $line.find(".checkbox-animated").removeClass('checkbox-animated')
-    html = $line.html()
-    $line.remove()
-    html
-
-  # if the given line has changed, update its counterpart in linesArray and add a sync event to the queue
-  syncLine = ($line, offset) ->
-    return if linesArray[$line.data("timestamp")] is $line.html()
-    timestamp = $line.data("timestamp")
-    linesArray[timestamp] = getSanitizedLineHtml($line)
-    syncQueue.push ["syncLine",
-      timestamp: timestamp
-      underneath_timestamps: buildUnderneathTimestamps($line)
-      text: linesArray[timestamp]
-      offset: offset
-    ]
-
-  # remove a line (by timestamp) from the linesArray, and add a 'removeLine' event to the queue
-  removeLine = (timestamp) ->
-    delete linesArray[timestamp]
-    syncQueue.push ["removeLine", {timestamp: timestamp}]
-
-  # remove any stray lines that exist in linesArray but not in our editor
-  cleanupSync = ->
-    for timestamp, line of linesArray
-      if nodeForTimestamp(timestamp).length is 0
-        removeLine(timestamp)
-
-  # call syncLine() for each top-level node
-  handleContentChange = (offset) ->
-    $line = $editor.children(":first")
-
-    while $line.length > 0
-      syncLine $line, offset
-      $line = $line.next()
-
-    cleanupSync()
-    syncUp()
-
-  # push the entire syncQueue to the server, empty the syncQueue.
-  syncUp = ->
-    socket.emit "syncUp", syncQueue.splice(0), setupParams if syncQueue.length > 0
-
-  handleSelectionChange = ->
-    #
 
   # insert html into the document
   insertHtml = (html) ->
@@ -477,47 +365,6 @@ window.MochiEditor = (noteId, username) ->
     whitespace = Helper.getIndentString($line[0].childNodes[0])
     $line[0].childNodes[0].textContent = $line[0].childNodes[0].textContent.replace(/^\s+/, "")
     $($line[0].childNodes[0]).before(whitespace + checkbox + " ")
-
-  # toggles the selected lines to/from being tasks
-  # @todo this gets funky when line breaks are selected
-  self.toggleTask = ->
-    lines = getSelectedLines()
-
-    $(lines).each ->
-
-      if $(@).find(".checkbox").length > 0
-        # remove the checkbox
-        $(@).find(".checkbox").remove()
-
-        # if there's still a blank space at the beginning of the line, remove that too.
-        if $(@)[0].childNodes[0].nodeType is 3 and $(@)[0].childNodes[0].textContent[0] is " "
-          $(@)[0].childNodes[0].textContent = $(@)[0].childNodes[0].textContent.substring(1)
-
-      else
-        addCheckbox($(@), true, false)
-
-  # toggles the selected task lines to be done/not done
-  # @todo this probably needs a checkup too
-  self.toggleTaskDone = ->
-    lines = getSelectedLines()
-
-    $(lines).each ->
-      if $(@).find(".checkbox").length > 0
-        toggleCheckbox($(@).find(".checkbox"))
-
-    queueContentChange()
-
-  # toggles a checkbox's state from done/not done
-  toggleCheckbox = ($checkbox) ->
-    $checkbox.toggleClass("checkbox-checked")
-    queueContentChange()
-
-  # find any top-level nodes that aren't timestamped, and timestamp them.
-  self.timestampUntimestampedNodes = ->
-    $nodes = $editor.find("> .node").filter ->
-      !$(@).data('timestamp')
-
-    timestamp_nodes($nodes)
 
   # finds the top-level node for a given node
   getLine = (node) ->
@@ -541,86 +388,58 @@ window.MochiEditor = (noteId, username) ->
       node = node.nextSibling
     divs
 
-  # uses the contents of $editor to set up the initial linesArray
-  setupLinesArray = ->
-    $editor.find("[data-timestamp]").each ->
-      linesArray[$(@).data('timestamp')] = $(@).html()
+  # toggles the selected lines to/from being tasks
+  # @todo this gets funky when line breaks are selected
+  self.toggleTask = ->
+    lines = getSelectedLines()
 
+    $(lines).each ->
 
+      if $(@).find(".checkbox").length > 0
+        # remove the checkbox
+        $(@).find(".checkbox").remove()
 
-  self.focusTitle = ->
+        # if there's still a blank space at the beginning of the line, remove that too.
+        if $(@)[0].childNodes[0].nodeType is 3 and $(@)[0].childNodes[0].textContent[0] is " "
+          $(@)[0].childNodes[0].textContent = $(@)[0].childNodes[0].textContent.substring(1)
+
+      else
+        addCheckbox($(@), true, false)
+
+  # toggles the selected task lines to be done/not done
+  # @todo this probably needs a checkup too
+  this.toggleTaskDone = ->
+    lines = getSelectedLines()
+
+    $(lines).each ->
+      if $(@).find(".checkbox").length > 0
+        toggleCheckbox($(@).find(".checkbox"))
+
+    @queueContentChange()
+
+  # toggles a checkbox's state from done/not done
+  toggleCheckbox = ($checkbox) ->
+    $checkbox.toggleClass("checkbox-checked")
+    @queueContentChange()
+
+  this.focusTitle = ->
     $titleEl.focus()
 
-  self.focusEditor = ->
+  this.focusEditor = ->
     $editor.focus()
 
-  self.pasteText = (text) ->
+  this.pasteText = (text) ->
     insertHtml text
-
-  # make sure that we don't have multiple levels of top-level nodes.
-  self.flattenNodes = ->
-
-    flattenChildren = (node) ->
-      i = 0
-      return if !node
-      length = node.childNodes.length
-
-      return node if length is 0
-
-      while i < length
-        if node.childNodes[i] and node.childNodes[i].nodeType is 1 and node.childNodes[i].classList and node.childNodes[i].classList.contains("node")
-          if node.childNodes[i].parentNode.id isnt $editor.attr('id')
-            $(node.childNodes[i].parentNode).after node.childNodes[i]
-
-          flattenChildren(node.childNodes[i])
-        i++
-
-    flattenChildren($editor[0])
-
-    queueContentChange()
 
   ################################################
   # Initial Setup
   ################################################
 
   $editor.attr "contenteditable", "true"
-  setupLinesArray()
 
-  socket = io.connect()
-  socket.emit "setup", setupParams
-
-  socket.on "syncDown", (messages) ->
-    ignore_changes ->
-      for message, i in messages
-        socketEvents[message[0]](message[1], message[2], i is (messages.length - 1))
-
-  socketEvents =
-
-    lineSynced: (data, username, setCursor = false) ->
-      $line = nodeForTimestamp(data.timestamp)
-
-      if $line.length > 0
-        # update line
-        $line.html data.text
-
-      else
-        # create line
-        $line = $("<div class='node' data-timestamp='" + data.timestamp + "'>" + data.text + "</div>")
-
-          # @possible ==
-        $underneathLine = nodeForUnderneathTimestamps(data.underneath_timestamps)
-
-        if !data.underneath_timestamps? or $underneathLine.length is 0
-          $("#editor").prepend $line
-        else
-          $underneathLine.after $line
-
-      setOtherUsersCursorOnLine($line, data.offset, username) if setCursor
-
-      linesArray[data.timestamp] = data.text
-
-    lineRemoved: (data, username, setCursor = false) ->
-      nodeForTimestamp(data.timestamp).remove()
-      delete linesArray[data.timestamp]
+  sharejs.open 'madarekceb', 'text', 'http://localhost:8000/channel', (error, doc) =>
+    $editor.html doc.getText()
+    @cachedValue = $editor.html()
+    @doc = doc
 
   return
