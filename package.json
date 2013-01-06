@@ -13,6 +13,7 @@
   "dependencies": {
     "coffee-script": "*",
     "express": "3.0.0rc3",
+    "connect": "*",
     "connect-assets": "*",
     "express-expose": "*",
     "mongoose": "*",
@@ -22,7 +23,8 @@
     "cheerio": "*",
     "redis": ">= 0.7.0",
     "connect-redis": "1.0.6",
-    "stylus": "*"
+    "stylus": "*",
+    "share": "*"
   },
   "subdomain": "socketsync"
 }
