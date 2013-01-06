@@ -322,7 +322,7 @@ window.MochiEditor = (noteId, username) ->
   # set a timeout for handleContentChange(), to ensure it gets called no more than once every X ms.
   this.queueContentChange = ->
     return if !@doc
-    html = $editor.html()
+    html = sanitizeHtml($editor.html())
     if html != @cachedValue
       # IE constantly replaces unix newlines with \r\n. ShareJS docs
       # should only have unix newlines.
@@ -345,7 +345,7 @@ window.MochiEditor = (noteId, username) ->
 
   # adds a checkbox to the given line
   addCheckbox = ($line) ->
-    checkbox = "<img class='checkbox' src='' width='0' height='0' />"
+    checkbox = "<img class='checkbox checkbox-animated' src='' width='0' height='0' />"
 
     ignoreChanges ->
       # if line begins with whitespace, add after that whitespace
@@ -410,6 +410,10 @@ window.MochiEditor = (noteId, username) ->
   toggleCheckbox = ($checkbox) ->
     $checkbox.toggleClass("checkbox-checked")
     self.queueContentChange()
+
+  sanitizeHtml = (html) ->
+    html = html.replace """<img class="checkbox checkbox-animated" src="" width="0" height="0">""", """<img class="checkbox" src="" width="0" height="0">"""
+    html
 
   this.focusTitle = ->
     $titleEl.focus()
