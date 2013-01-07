@@ -100,26 +100,6 @@ Helper =
       node: nodeOffset
     }
 
-  preserveSelection: (cb) ->
-    selection = rangy.getSelection().saveCharacterRanges($("#editor")[0]);
-    cb()
-    rangy.getSelection().restoreCharacterRanges($("#editor")[0], selection)
-
-  saveSelection: ->
-    if window.getSelection
-      sel = window.getSelection()
-      return sel.getRangeAt(0)  if sel.getRangeAt and sel.rangeCount
-    else return document.selection.createRange()  if document.selection and document.selection.createRange
-    null
-
-  restoreSelection: (range) ->
-    if range
-      if window.getSelection
-        sel = window.getSelection()
-        sel.removeAllRanges()
-        sel.addRange range
-      else range.select()  if document.selection and range.select
-
   getPasteData: (ev, cb) ->
 
     initialSelection = Helper.saveSelection()
@@ -462,15 +442,22 @@ window.MochiEditor = (noteId, username) ->
 
       tempValue = $editor.html()
 
+      savedSelection = rangy.getSelection().saveCharacterRanges($editor[0])
+
       for op in ops
         if op.i? # insert
           tempValue = tempValue[...op.p] + op.i + tempValue[op.p..]
         else if op.d? # delete
           tempValue = tempValue[...op.p] + tempValue[op.p + op.d.length..]
 
-      Helper.preserveSelection =>
-        ignoreChanges =>
-          $editor.html tempValue
+        if savedSelection[0].range?.start > op.p
+          savedSelection[0].range.start += (if op.i? then op.i.length else if op.d? then -op.d.length)
+          savedSelection[0].range.end += (if op.i? then op.i.length else if op.d? then -op.d.length)
+
+      ignoreChanges =>
+        $editor.html tempValue
+
+      rangy.getSelection().restoreCharacterRanges($editor[0], savedSelection)
 
       @cachedValue = $editor.html()
 
