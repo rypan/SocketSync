@@ -1,6 +1,6 @@
 {
   "name": "SocketSync",
-  "version": "0.0.0-17",
+  "version": "0.0.0-19",
   "engines": {
     "node": ">= 0.5.0",
     "npm": "1.1.x"

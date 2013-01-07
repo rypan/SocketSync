@@ -452,7 +452,7 @@ window.MochiEditor = (noteId, username) ->
 
   $editor.attr "contenteditable", "true"
 
-  sharejs.open noteId, 'text', 'http://localhost:8000/channel', (error, doc) =>
+  sharejs.open noteId, 'text', '/channel', (error, doc) =>
     $editor.html doc.getText()
     @cachedValue = $editor.html()
     @doc = doc
