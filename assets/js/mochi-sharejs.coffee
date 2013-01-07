@@ -101,9 +101,9 @@ Helper =
     }
 
   preserveSelection: (cb) ->
-    selection = Helper.saveSelection()
+    selection = rangy.getSelection().saveCharacterRanges($("#editor")[0]);
     cb()
-    Helper.restoreSelection(selection)
+    rangy.getSelection().restoreCharacterRanges($("#editor")[0], selection)
 
   saveSelection: ->
     if window.getSelection
@@ -378,6 +378,7 @@ window.MochiEditor = (noteId, username) ->
 
   # finds the top-level node for a given node
   getLine = (node) ->
+    return if !node
     node = node.parentNode while $(node.parentNode).attr('id') isnt "editor"
     node
 
@@ -467,8 +468,9 @@ window.MochiEditor = (noteId, username) ->
         else if op.d? # delete
           tempValue = tempValue[...op.p] + tempValue[op.p + op.d.length..]
 
-      ignoreChanges =>
-        $editor.html tempValue
+      Helper.preserveSelection =>
+        ignoreChanges =>
+          $editor.html tempValue
 
       @cachedValue = $editor.html()
 
