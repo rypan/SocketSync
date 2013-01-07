@@ -1,4 +1,3 @@
 ##### todo:
 
-- properly determine difference in html elements
-- checkboxes not animating properly and putting cursor in weird places
+- properly preserve selection when replacing $editor.html(). this might be a dealbreaker.
