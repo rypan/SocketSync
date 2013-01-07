@@ -441,6 +441,7 @@ window.MochiEditor = (noteId, username) ->
     doc.on 'remoteop', (ops) =>
 
       tempValue = $editor.html()
+      beforeTotalChars = rangy.innerText($editor[0]).length
 
       savedSelection = rangy.getSelection().saveCharacterRanges($editor[0])
 
@@ -450,12 +451,17 @@ window.MochiEditor = (noteId, username) ->
         else if op.d? # delete
           tempValue = tempValue[...op.p] + tempValue[op.p + op.d.length..]
 
-        if savedSelection[0].range?.start > op.p
-          savedSelection[0].range.start += (if op.i? then op.i.length else if op.d? then -op.d.length)
-          savedSelection[0].range.end += (if op.i? then op.i.length else if op.d? then -op.d.length)
+        opPosition = op.p
 
       ignoreChanges =>
         $editor.html tempValue
+
+      afterTotalChars = rangy.innerText($editor[0]).length
+
+      if savedSelection[0].range?.start > opPosition
+        # find the entire length of selectable chars from rangy and add the difference
+        savedSelection[0].range.start += afterTotalChars - beforeTotalChars
+        savedSelection[0].range.end += afterTotalChars - beforeTotalChars
 
       rangy.getSelection().restoreCharacterRanges($editor[0], savedSelection)
 
