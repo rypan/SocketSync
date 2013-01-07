@@ -20,14 +20,12 @@ if process.env.REDIS_HOST
     host: process.env.REDIS_HOST
     pass: process.env.REDIS_PW
     port: 6379
-    maxAge: 1209600000
 
 else
   redisStore = new RedisStore
     host: "localhost"
     pass: ""
     port: 6379
-    maxAge: 1209600000
 
 app.configure ->
   app.set('port', process.env.PORT || 8000)
@@ -69,11 +67,10 @@ redisConfig = {type: 'redis'}
 
 if process.env.REDIS_HOST
   redisConfig.hostname = process.env.REDIS_HOST
-  redisConfig.auth = process.env.REDIS_PW
+  redisConfig.authPassword = process.env.REDIS_PW
 
 else
   redisConfig.hostname = "localhost"
-  redisConfig.auth = ""
 
 options = {db: redisConfig, browserChannel: {cors:"*"}}
 

@@ -1,6 +1,6 @@
 {
   "name": "SocketSync",
-  "version": "0.0.0-9",
+  "version": "0.0.0-17",
   "engines": {
     "node": ">= 0.5.0",
     "npm": "1.1.x"
@@ -20,9 +20,9 @@
     "jade": "0.27.7",
     "cheerio": "0.10.3",
     "redis": "0.8.2",
-    "connect-redis": "1.0.6",
+    "connect-redis": "1.4.5",
     "stylus": "0.32.0",
-    "share": "0.5.0"
+    "share": "git://github.com/adamjacobbecker/ShareJS.git"
   },
   "subdomain": "socketsync"
 }
